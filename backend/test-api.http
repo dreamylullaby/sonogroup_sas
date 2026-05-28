@@ -1,0 +1,234 @@
+### Variables
+@baseUrl = http://localhost:3000
+@token = 
+
+### ============================================================================
+### AUTENTICACIÓN
+### ============================================================================
+
+### 1. Verificar que el servidor esté corriendo
+GET {{baseUrl}}
+
+### 2. Registro de usuario
+POST {{baseUrl}}/api/auth/registro
+Content-Type: application/json
+
+{
+  "nombre": "María García",
+  "email": "maria.garcia@example.com",
+  "telefono": "3109876543",
+  "password": "password123",
+  "rol": "usuario"
+}
+
+### 3. Login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "maria.garcia@example.com",
+  "password": "password123"
+}
+
+### ============================================================================
+### INMUEBLES GENERALES
+### ============================================================================
+
+### 4. Listar todos los inmuebles
+GET {{baseUrl}}/api/inmuebles?limit=10&offset=0
+
+### 5. Buscar inmuebles por tipo
+GET {{baseUrl}}/api/inmuebles?tipo_inmueble=casa&tipo_operacion=venta
+
+### 6. Obtener un inmueble específico
+GET {{baseUrl}}/api/inmuebles/1
+
+### ============================================================================
+### CASAS
+### ============================================================================
+
+### 7. Listar todas las casas
+GET {{baseUrl}}/api/casas
+
+### 8. Obtener una casa específica
+GET {{baseUrl}}/api/casas/1
+
+### 9. Actualizar características de una casa (requiere token)
+PUT {{baseUrl}}/api/casas/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "habitaciones": 5,
+  "banos": 3,
+  "patio": true,
+  "jardin": true
+}
+
+### ============================================================================
+### APARTAMENTOS
+### ============================================================================
+
+### 10. Listar todos los apartamentos
+GET {{baseUrl}}/api/apartamentos
+
+### 11. Obtener un apartamento específico
+GET {{baseUrl}}/api/apartamentos/2
+
+### 12. Actualizar características de un apartamento (requiere token)
+PUT {{baseUrl}}/api/apartamentos/2
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "habitaciones": 3,
+  "balcon": true,
+  "vigilancia": true
+}
+
+### ============================================================================
+### LOCALES COMERCIALES
+### ============================================================================
+
+### 13. Listar todos los locales
+GET {{baseUrl}}/api/locales
+
+### 14. Filtrar locales por zona
+GET {{baseUrl}}/api/locales?zona_local=comercial
+
+### 15. Obtener un local específico
+GET {{baseUrl}}/api/locales/3
+
+### ============================================================================
+### BODEGAS
+### ============================================================================
+
+### 16. Listar todas las bodegas
+GET {{baseUrl}}/api/bodegas
+
+### 17. Obtener una bodega específica
+GET {{baseUrl}}/api/bodegas/5
+
+### ============================================================================
+### FINCAS
+### ============================================================================
+
+### 18. Listar todas las fincas
+GET {{baseUrl}}/api/fincas
+
+### 19. Filtrar fincas por topografía
+GET {{baseUrl}}/api/fincas?topografia=plana
+
+### 20. Filtrar fincas por vías de acceso
+GET {{baseUrl}}/api/fincas?vias_acceso=pavimentada
+
+### 21. Obtener una finca específica
+GET {{baseUrl}}/api/fincas/4
+
+### ============================================================================
+### APARTAESTUDIOS
+### ============================================================================
+
+### 22. Listar todos los apartaestudios
+GET {{baseUrl}}/api/apartaestudios
+
+### 23. Filtrar apartaestudios amoblados
+GET {{baseUrl}}/api/apartaestudios?amoblado=true
+
+### 24. Obtener un apartaestudio específico
+GET {{baseUrl}}/api/apartaestudios/6
+
+### ============================================================================
+### USUARIOS
+### ============================================================================
+
+### 25. Obtener perfil del usuario autenticado
+GET {{baseUrl}}/api/usuarios/perfil
+Authorization: Bearer {{token}}
+
+### 26. Obtener mis inmuebles
+GET {{baseUrl}}/api/usuarios/mis-inmuebles
+Authorization: Bearer {{token}}
+
+### 27. Actualizar perfil
+PUT {{baseUrl}}/api/usuarios/perfil
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nombre": "María García Actualizada",
+  "telefono": "3009876543"
+}
+
+### ============================================================================
+### FOTOGRAFÍAS
+### ============================================================================
+
+### 28. Obtener fotografías de un inmueble
+GET {{baseUrl}}/api/fotografias/inmueble/1
+
+### 29. Agregar fotografía (requiere token)
+POST {{baseUrl}}/api/fotografias
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id_inmueble": 1,
+  "url_foto": "/images/casa1/fachada.jpg",
+  "descripcion": "Fachada principal",
+  "orden": 1
+}
+
+### ============================================================================
+### CREAR INMUEBLE COMPLETO
+### ============================================================================
+
+### 30. Crear una casa completa (requiere token)
+POST {{baseUrl}}/api/inmuebles
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "valor": 350000000,
+  "estrato": 4,
+  "descripcion": "Hermosa casa de dos pisos en barrio residencial",
+  "numero_matricula": "MAT-TEST-001",
+  "tipo_operacion": "venta",
+  "tipo_inmueble": "casa",
+  "estado_inmueble": "usado",
+  "zona": "urbano",
+  "estado_conservacion": "remodelado",
+  "ubicacion": {
+    "direccion": "Carrera 45 #123-45",
+    "barrio_vereda": "El Poblado",
+    "municipio": "Medellín",
+    "departamento": "Antioquia",
+    "tipo_via": "Carrera"
+  },
+  "servicios": {
+    "acueducto": true,
+    "energia": true,
+    "alcantarillado": true,
+    "gas": true,
+    "internet": true,
+    "otros": "Vigilancia privada"
+  },
+  "caracteristicas": {
+    "area_frente": 8.5,
+    "area_fondo": 15.0,
+    "anos_construccion": 15,
+    "metros_cuadrados": 180,
+    "pisos": 2,
+    "habitaciones": 4,
+    "banos": 3,
+    "patio": true,
+    "jardin": true,
+    "balcon": false,
+    "terraza": true,
+    "descripcion_acabados": "Pisos en porcelanato, ventanas en aluminio",
+    "sala_comedor": "sala-comedor",
+    "cocina": "integral",
+    "zona_lavado": "interna",
+    "parqueadero": "cubierto"
+  }
+}

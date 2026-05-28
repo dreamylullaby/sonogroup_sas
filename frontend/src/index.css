@@ -1,0 +1,242 @@
+:root {
+  /* Colores Principales SONOGROUP */
+  --primary-color: #0A0F2C;        /* Azul Oscuro Corporativo */
+  --accent-color: #E20613;         /* Rojo Energético */
+  --bg-light: #F7F7F7;             /* Blanco Suave */
+  
+  /* Colores Secundarios */
+  --secondary-color: #2E3A59;      /* Azul Petróleo */
+  --text-light: #BFC4CA;           /* Gris Medio */
+  --blue-medium: #2C5C9B;          /* Azul Medio */
+  
+  /* Colores de Interacción */
+  --accent-hover: #8C1013;         /* Rojo Oscuro */
+  --accent-vibrant: #AC000D;       /* Rojo Vibrante */
+  
+  /* Colores de Texto */
+  --text-color: #0A0F2C;
+  --text-secondary: #2E3A59;
+  
+  /* Otros */
+  --white: #ffffff;
+  --border-color: #BFC4CA;
+  --shadow: 0 2px 8px rgba(10, 15, 44, 0.08);
+  --shadow-lg: 0 10px 30px rgba(10, 15, 44, 0.12);
+  
+  /* Tipografías */
+  --font-primary: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-heading: 'Playfair Display', Georgia, serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: var(--font-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--text-color);
+  background-color: var(--bg-light);
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--primary-color);
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* ── TEMA OSCURO ─────────────────────────────────────────── */
+[data-theme="oscuro"] {
+  --bg-page: #0f1117;
+  --bg-card: #1a1d27;
+  --text-main: #e8eaf0;
+  --text-muted: #9ca3af;
+  --border: #2d3148;
+  --input-bg: #252836;
+  --bg-light: #1a1d27;
+  --white: #1a1d27;
+  --text-color: #e8eaf0;
+  --text-secondary: #9ca3af;
+  --border-color: #2d3148;
+}
+
+[data-theme="oscuro"] body {
+  background: #0f1117;
+  color: #e8eaf0;
+}
+
+[data-theme="oscuro"] .navbar {
+  background: #0f1117 !important;
+  border-bottom: 1px solid #2d3148;
+}
+
+[data-theme="oscuro"] .user-dropdown,
+[data-theme="oscuro"] .settings-card,
+[data-theme="oscuro"] .profile-card,
+[data-theme="oscuro"] .profile-header-card,
+[data-theme="oscuro"] .myp-card,
+[data-theme="oscuro"] .myp-solicitud-card,
+[data-theme="oscuro"] .settings-nav {
+  background: #1a1d27 !important;
+  color: #e8eaf0 !important;
+}
+
+[data-theme="oscuro"] .profile-page,
+[data-theme="oscuro"] .settings-page,
+[data-theme="oscuro"] .myp-page,
+[data-theme="oscuro"] .properties-page {
+  background: #0f1117 !important;
+}
+
+[data-theme="oscuro"] h1,
+[data-theme="oscuro"] h2,
+[data-theme="oscuro"] h3,
+[data-theme="oscuro"] h4 {
+  color: #e8eaf0 !important;
+}
+
+[data-theme="oscuro"] .form-group input,
+[data-theme="oscuro"] .form-group select,
+[data-theme="oscuro"] .pref-group select {
+  background: #252836 !important;
+  border-color: #2d3148 !important;
+  color: #e8eaf0 !important;
+}
+
+[data-theme="oscuro"] .stat-item,
+[data-theme="oscuro"] .sesion-item {
+  background: #252836 !important;
+}
+
+[data-theme="oscuro"] .footer {
+  background: #0a0c14 !important;
+}
+
+
+/* ── ESTILOS GLOBALES DE FORMULARIOS ─────────────────────── */
+.field-error {
+  color: var(--accent-color);
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+.error-message {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.success-message {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+[data-theme="oscuro"] .error-message {
+  background: #1c1012;
+  border-color: #5c2020;
+  color: #fca5a5;
+}
+
+[data-theme="oscuro"] .success-message {
+  background: #0c1f14;
+  border-color: #1a5c32;
+  color: #86efac;
+}
+
+[data-theme="oscuro"] .field-error {
+  color: #fca5a5;
+}
+
+input[aria-invalid="true"],
+select[aria-invalid="true"],
+textarea[aria-invalid="true"] {
+  border-color: var(--accent-color) !important;
+}
+
+
+/* ── COMPONENTES UI GLOBALES ─────────────────────────────── */
+.field-helper {
+  color: var(--text-light);
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+.required-mark {
+  color: var(--accent-color);
+}
+
+.has-error input,
+.has-error select,
+.has-error textarea {
+  border-color: var(--accent-color) !important;
+}
+
+/* Loading button spinner */
+.btn-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+
+.btn-loading {
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Loading spinner global */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  gap: 1rem;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border-color);
+  border-top-color: var(--accent-color);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}

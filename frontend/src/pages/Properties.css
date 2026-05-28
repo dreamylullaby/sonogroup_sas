@@ -1,0 +1,134 @@
+.properties-page {
+  min-height: 100vh;
+}
+
+.page-header {
+  background: linear-gradient(135deg, #0A0F2C 0%, #2E3A59 100%);
+  color: white;
+  padding: 4rem 2rem 3rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.page-header::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 400px;
+  height: 400px;
+  background: rgba(226, 6, 19, 0.1);
+  border-radius: 50%;
+  z-index: 0;
+}
+
+.page-header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  letter-spacing: -1px;
+  position: relative;
+  z-index: 1;
+}
+
+.page-header p {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 300;
+  opacity: 0.9;
+  position: relative;
+  z-index: 1;
+}
+
+.properties-section {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 3rem 2rem;
+}
+
+.properties-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #E20613;
+}
+
+.properties-header h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem;
+  color: #0A0F2C;
+  margin: 0;
+}
+
+.results-count {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1rem;
+  color: #BFC4CA;
+  font-weight: 500;
+}
+
+.properties-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.loading,
+.error,
+.no-results {
+  text-align: center;
+  padding: 4rem 2rem;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #F7F7F7;
+  border-top: 4px solid #E20613;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading p,
+.error p,
+.no-results p {
+  font-family: 'Montserrat', sans-serif;
+  color: #0A0F2C;
+  font-size: 1.1rem;
+}
+
+.error p {
+  color: #E20613;
+}
+
+@media (max-width: 768px) {
+  .page-header h1 {
+    font-size: 2rem;
+  }
+
+  .page-header p {
+    font-size: 1rem;
+  }
+
+  .properties-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .properties-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
