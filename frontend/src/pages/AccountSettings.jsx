@@ -126,9 +126,13 @@ const AccountSettings = () => {
     setDeleteMsg(null)
     setDeleteLoading(true)
     try {
-      await api.delete('/api/configuracion/cuenta', { data: { password: deletePassword } })
-      logout()
-      navigate('/')
+      // Crear solicitud de eliminación (flujo con revisión admin según BD v3.4)
+      await api.post('/api/solicitudes-cuenta', {
+        motivo: 'Solicitud del usuario desde configuración de cuenta'
+      })
+      setShowDeleteModal(false)
+      setDeletePassword('')
+      alert('Tu solicitud de eliminación ha sido enviada. Un administrador la revisará.')
     } catch (err) {
       setDeleteMsg(parseApiError(err))
     } finally { setDeleteLoading(false) }
@@ -343,18 +347,14 @@ const AccountSettings = () => {
               </svg>
             </div>
             <h3>Eliminar cuenta</h3>
-            <p>Esta acción es irreversible. Tu cuenta quedará desactivada y no podrás recuperarla.</p>
+            <p>Tu solicitud será revisada por un administrador. Si es aprobada, tu cuenta quedará desactivada.</p>
             {deleteMsg && <div className="settings-msg error">{deleteMsg}</div>}
-            <div className="form-group">
-              <label>Confirma tu contraseña</label>
-              <input type="password" value={deletePassword} onChange={e => setDeletePassword(e.target.value)} placeholder="••••••••"/>
-            </div>
             <div className="modal-delete-actions">
-              <button className="btn-cancel" onClick={() => { setShowDeleteModal(false); setDeletePassword(''); setDeleteMsg(null) }}>
+              <button className="btn-cancel" onClick={() => { setShowDeleteModal(false); setDeleteMsg(null) }}>
                 Cancelar
               </button>
-              <button className="btn-delete-confirm" onClick={handleDeleteAccount} disabled={deleteLoading || !deletePassword}>
-                {deleteLoading ? 'Eliminando...' : 'Eliminar mi cuenta'}
+              <button className="btn-delete-confirm" onClick={handleDeleteAccount} disabled={deleteLoading}>
+                {deleteLoading ? 'Enviando...' : 'Solicitar eliminación'}
               </button>
             </div>
           </div>

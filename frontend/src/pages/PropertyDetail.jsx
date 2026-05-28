@@ -250,10 +250,6 @@ const PropertyDetail = () => {
               <span>{property.estado_inmueble?.charAt(0).toUpperCase() + property.estado_inmueble?.slice(1)}</span>
             </div>
             <div className="info-item">
-              <strong>Conservación:</strong>
-              <span>{property.estado_conservacion?.charAt(0).toUpperCase() + property.estado_conservacion?.slice(1)}</span>
-            </div>
-            <div className="info-item">
               <strong>Estrato:</strong>
               <span>{property.estrato}</span>
             </div>
@@ -261,6 +257,18 @@ const PropertyDetail = () => {
               <strong>Zona:</strong>
               <span>{property.zona?.charAt(0).toUpperCase() + property.zona?.slice(1)}</span>
             </div>
+            {property.acepta_permuta && (
+              <div className="info-item">
+                <strong>Permuta:</strong>
+                <span>Acepta permuta</span>
+              </div>
+            )}
+            {property.valor_administracion && (
+              <div className="info-item">
+                <strong>Administración:</strong>
+                <span>{formatPrice(property.valor_administracion)}/mes</span>
+              </div>
+            )}
             <div className="info-item">
               <strong>Matrícula:</strong>
               <span>{property.numero_matricula}</span>
@@ -318,9 +326,6 @@ const PropertyDetail = () => {
                 )}
                 <p><strong>Municipio:</strong> {property.ubicaciones.municipio}</p>
                 <p><strong>Departamento:</strong> {property.ubicaciones.departamento}</p>
-                {property.ubicaciones.tipo_via && (
-                  <p><strong>Tipo de Vía:</strong> {property.ubicaciones.tipo_via}</p>
-                )}
               </div>
             </div>
           )}

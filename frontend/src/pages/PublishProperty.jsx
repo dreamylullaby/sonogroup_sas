@@ -17,8 +17,10 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
   const totalSteps = 4
 
   const [formDataComun, setFormDataComun] = useState({
-    valor: '', estrato: '3', descripcion: '', numero_matricula: '',
-    tipo_operacion: 'venta', tipo_inmueble: 'casa', estado_inmueble: 'nuevo', zona: 'urbano'
+    valor: '', valor_administracion: '', estrato: '3', descripcion: '',
+    numero_matricula: '', codigo_catastral: '',
+    tipo_operacion: 'venta', tipo_inmueble: 'casa', estado_inmueble: 'nuevo',
+    zona: 'urbano', acepta_permuta: false
   })
 
   const [ubicacion, setUbicacion] = useState({
@@ -43,17 +45,23 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
       { name: 'pisos', label: 'Número de Pisos', type: 'number' },
       { name: 'habitaciones', label: 'Habitaciones', type: 'number', required: true },
       { name: 'banos', label: 'Baños', type: 'number', required: true },
+      { name: 'parqueadero_cantidad', label: 'Cantidad Parqueaderos', type: 'number' },
       { name: 'patio', label: 'Patio', type: 'checkbox' },
       { name: 'jardin', label: 'Jardín', type: 'checkbox' },
+      { name: 'antejadin', label: 'Antejardín', type: 'checkbox' },
       { name: 'terraza', label: 'Terraza', type: 'checkbox' },
       { name: 'balcon', label: 'Balcón', type: 'checkbox' },
       { name: 'zona_lavanderia', label: 'Zona Lavandería', type: 'checkbox' },
       { name: 'cocina_equipada', label: 'Cocina Equipada', type: 'checkbox' },
+      { name: 'cuarto_servicio', label: 'Cuarto de Servicio', type: 'checkbox' },
+      { name: 'bano_servicio', label: 'Baño de Servicio', type: 'checkbox' },
+      { name: 'chimenea', label: 'Chimenea', type: 'checkbox' },
+      { name: 'deposito', label: 'Depósito', type: 'checkbox' },
       { name: 'descripcion_acabados', label: 'Descripción de Acabados', type: 'textarea' },
       { name: 'sala_comedor', label: 'Sala/Comedor', type: 'select', options: ['sala', 'comedor', 'sala_comedor'] },
       { name: 'cocina', label: 'Tipo de Cocina', type: 'select', options: ['integral', 'semi_integral', 'sencilla'] },
       { name: 'zona_lavanderia_tipo', label: 'Tipo Lavandería', type: 'select', options: ['interna', 'externa'] },
-      { name: 'parqueadero', label: 'Parqueadero', type: 'select', options: ['interno', 'externo', 'cubierto', 'descubierto', 'ninguno'] }
+      { name: 'parqueadero', label: 'Tipo Parqueadero', type: 'select', options: ['interno', 'externo', 'cubierto', 'descubierto', 'ninguno'] }
     ],
     apartamento: [
       { name: 'frente', label: 'Frente (m)', type: 'number', step: '0.01' },
@@ -63,11 +71,14 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
       { name: 'cantidad_duenos', label: 'Cantidad de Dueños', type: 'number' },
       { name: 'piso', label: 'Piso', type: 'number' },
       { name: 'torre', label: 'Torre/Bloque', type: 'number' },
+      { name: 'numero_apartamento', label: 'Número Apartamento', type: 'text' },
       { name: 'habitaciones', label: 'Habitaciones', type: 'number', required: true },
       { name: 'banos', label: 'Baños', type: 'number', required: true },
       { name: 'balcon', label: 'Balcón', type: 'checkbox' },
       { name: 'ascensor', label: 'Ascensor', type: 'checkbox' },
       { name: 'vigilancia', label: 'Vigilancia 24h', type: 'checkbox' },
+      { name: 'cuarto_servicio', label: 'Cuarto de Servicio', type: 'checkbox' },
+      { name: 'bano_servicio', label: 'Baño de Servicio', type: 'checkbox' },
       { name: 'valor_vigilancia', label: 'Valor Vigilancia ($)', type: 'number', step: '0.01' },
       { name: 'zonas_comunes', label: 'Zonas Comunes', type: 'text' },
       { name: 'descripcion_acabados', label: 'Descripción de Acabados', type: 'textarea' },
@@ -77,10 +88,12 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
     ],
     apartaestudio: [
       { name: 'area_total', label: 'Área Total (m²)', type: 'number', step: '0.01', required: true },
+      { name: 'piso', label: 'Piso', type: 'number' },
       { name: 'tiene_bano', label: 'Baño Privado', type: 'checkbox' },
       { name: 'parqueadero', label: 'Parqueadero', type: 'checkbox' },
       { name: 'balcon', label: 'Balcón', type: 'checkbox' },
       { name: 'amoblado', label: 'Amoblado', type: 'checkbox' },
+      { name: 'deposito', label: 'Depósito', type: 'checkbox' },
       { name: 'ascensor', label: 'Ascensor', type: 'checkbox' },
       { name: 'vigilancia', label: 'Vigilancia', type: 'checkbox' },
       { name: 'cocina', label: 'Tipo de Cocina', type: 'select', options: ['integral', 'semi_integral', 'sencilla'] },
@@ -91,17 +104,21 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
       { name: 'frente', label: 'Frente (m)', type: 'number', step: '0.01' },
       { name: 'fondo', label: 'Fondo (m)', type: 'number', step: '0.01' },
       { name: 'altura', label: 'Altura (m)', type: 'number', step: '0.01' },
+      { name: 'piso', label: 'Piso', type: 'number' },
       { name: 'parqueaderos', label: 'Parqueaderos (cantidad)', type: 'number' },
       { name: 'mezzanine', label: 'Mezzanine', type: 'checkbox' },
       { name: 'banos', label: 'Baños', type: 'checkbox' },
       { name: 'vitrina', label: 'Vitrina', type: 'checkbox' },
+      { name: 'sotano', label: 'Sótano', type: 'checkbox' },
       { name: 'descripcion_acabados', label: 'Descripción de Acabados', type: 'textarea' },
+      { name: 'uso_suelo', label: 'Uso del Suelo (POT)', type: 'text' },
       { name: 'zona_local', label: 'Zona del Local', type: 'select', options: ['comercial', 'residencial', 'mixta'] }
     ],
     bodega: [
       { name: 'area_construida', label: 'Área Construida (m²)', type: 'number', step: '0.01', required: true },
       { name: 'frente', label: 'Frente (m)', type: 'number', step: '0.01', required: true },
       { name: 'fondo', label: 'Fondo (m)', type: 'number', step: '0.01', required: true },
+      { name: 'area_lote', label: 'Área Lote (m²)', type: 'number', step: '0.01' },
       { name: 'altura_libre', label: 'Altura Libre (m)', type: 'number', step: '0.01' },
       { name: 'parqueaderos', label: 'Parqueaderos (cantidad)', type: 'number' },
       { name: 'oficinas', label: 'Oficinas', type: 'checkbox' },
@@ -116,11 +133,20 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
       { name: 'area_total', label: 'Área Total', type: 'number', step: '0.01', required: true },
       { name: 'area_cultivable', label: 'Área Cultivable', type: 'number', step: '0.01' },
       { name: 'area_construcciones', label: 'Área Construcciones (m²)', type: 'number', step: '0.01' },
-      { name: 'fuentes_agua', label: 'Fuentes de Agua', type: 'checkbox' },
+      { name: 'numero_casas', label: 'Número de Casas', type: 'number' },
+      { name: 'minutos_cabecera', label: 'Minutos a Cabecera Municipal', type: 'number' },
+      { name: 'fuentes_agua', label: 'Fuentes de Agua', type: 'text' },
       { name: 'casa_principal', label: 'Casa Principal', type: 'checkbox' },
       { name: 'piscina', label: 'Piscina', type: 'checkbox' },
+      { name: 'jacuzzi', label: 'Jacuzzi', type: 'checkbox' },
+      { name: 'chimenea', label: 'Chimenea', type: 'checkbox' },
+      { name: 'cancha', label: 'Cancha', type: 'checkbox' },
+      { name: 'lago_estanque', label: 'Lago/Estanque', type: 'checkbox' },
+      { name: 'cabana_mayordomo', label: 'Cabaña Mayordomo', type: 'checkbox' },
       { name: 'otras_construcciones', label: 'Otras Construcciones', type: 'textarea' },
       { name: 'cultivos_actuales', label: 'Cultivos Actuales', type: 'textarea' },
+      { name: 'animales', label: 'Animales', type: 'textarea' },
+      { name: 'descripcion_via', label: 'Descripción Vía de Acceso', type: 'textarea' },
       { name: 'unidad_area', label: 'Unidad de Área', type: 'select', options: ['m2', 'hectareas', 'fanegadas', 'cuadras'] },
       { name: 'topografia', label: 'Topografía', type: 'select', options: ['plana', 'inclinada', 'irregular', 'semiondulada', 'ondulada'] },
       { name: 'vias_acceso', label: 'Vías de Acceso', type: 'select', options: ['pavimentada', 'afirmada', 'trocha', 'sin_via'] }
@@ -131,7 +157,9 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
       { name: 'fondo', label: 'Fondo (m)', type: 'number', step: '0.01' },
       { name: 'pendiente', label: 'Tiene Pendiente', type: 'checkbox' },
       { name: 'tiene_casa', label: 'Tiene Casa', type: 'checkbox' },
+      { name: 'tiene_documento', label: 'Tiene Documento (Matrícula/Catastro)', type: 'checkbox' },
       { name: 'uso_suelo', label: 'Uso del Suelo (POT)', type: 'text' },
+      { name: 'descripcion_via', label: 'Descripción Vía de Acceso', type: 'textarea' },
       { name: 'topografia', label: 'Topografía', type: 'select', options: ['plana', 'inclinada', 'irregular', 'semiondulada', 'ondulada'] },
       { name: 'vias_acceso', label: 'Vías de Acceso', type: 'select', options: ['pavimentada', 'afirmada', 'trocha', 'sin_via'] }
     ]
@@ -150,13 +178,16 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
 
       setFormDataComun({
         valor: property.valor || '',
+        valor_administracion: property.valor_administracion || '',
         estrato: property.estrato?.toString() || '3',
         descripcion: property.descripcion || '',
         numero_matricula: property.numero_matricula || '',
+        codigo_catastral: property.codigo_catastral || '',
         tipo_operacion: property.tipo_operacion || 'venta',
         tipo_inmueble: property.tipo_inmueble || 'casa',
         estado_inmueble: property.estado_inmueble || 'nuevo',
-        zona: property.zona || 'urbano'
+        zona: property.zona || 'urbano',
+        acepta_permuta: property.acepta_permuta || false
       })
 
       if (property.ubicaciones) {
@@ -185,8 +216,8 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
   }, [formDataComun.tipo_inmueble, editMode])
 
   const handleCommonChange = (e) => {
-    const { name, value } = e.target
-    setFormDataComun(prev => ({ ...prev, [name]: value }))
+    const { name, value, type, checked } = e.target
+    setFormDataComun(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
   }
 
   const handleUbicacionChange = (e) => {
@@ -377,6 +408,22 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
                   value={formDataComun.valor} onChange={handleCommonChange} disabled={loading}
                   required min="1" step="0.01" />
               </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="valor_administracion">Valor Administración (COP)</label>
+                  <input type="number" id="valor_administracion" name="valor_administracion" placeholder="Ej: 350000"
+                    value={formDataComun.valor_administracion} onChange={handleCommonChange} disabled={loading}
+                    min="0" step="0.01" />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="estrato">Estrato</label>
+                  <select id="estrato" name="estrato" value={formDataComun.estrato}
+                    onChange={handleCommonChange} disabled={loading}>
+                    <option value="">No aplica</option>
+                    {[1, 2, 3, 4, 5, 6].map(e => <option key={e} value={e}>{e}</option>)}
+                  </select>
+                </div>
+              </div>
               <div className="form-group">
                 <label htmlFor="descripcion">Descripción</label>
                 <textarea id="descripcion" name="descripcion" placeholder="Describe la propiedad (mínimo 10 caracteres si se llena)..."
@@ -402,12 +449,24 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
                   </select>
                 </div>
               </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="numero_matricula">Número Matrícula</label>
+                  <input type="text" id="numero_matricula" name="numero_matricula" placeholder="Matrícula ORIP"
+                    value={formDataComun.numero_matricula} onChange={handleCommonChange} disabled={loading} />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="codigo_catastral">Código Catastral</label>
+                  <input type="text" id="codigo_catastral" name="codigo_catastral" placeholder="Ficha predial IGAC"
+                    value={formDataComun.codigo_catastral} onChange={handleCommonChange} disabled={loading} />
+                </div>
+              </div>
               <div className="form-group">
-                <label htmlFor="estrato">Estrato</label>
-                <select id="estrato" name="estrato" value={formDataComun.estrato}
-                  onChange={handleCommonChange} disabled={loading}>
-                  {[1, 2, 3, 4, 5, 6].map(e => <option key={e} value={e}>{e}</option>)}
-                </select>
+                <label className="feature-checkbox">
+                  <input type="checkbox" name="acepta_permuta" checked={!!formDataComun.acepta_permuta}
+                    onChange={handleCommonChange} disabled={loading} />
+                  <span>Acepta Permuta</span>
+                </label>
               </div>
             </div>
           )}

@@ -117,7 +117,7 @@ const Register = () => {
                 <option value="CC">{t('cedula')}</option>
                 <option value="CE">{t('cedulaExt')}</option>
                 <option value="NIT">NIT</option>
-                <option value="PP">{t('pasaporte')}</option>
+                <option value="PA">{t('pasaporte')}</option>
               </select>
             </div>
             <div className="form-group">

@@ -7,7 +7,7 @@ const router = express.Router();
 // Obtener todas las fincas
 router.get('/', async (req, res) => {
     try {
-        const { limit = 50, offset = 0, topografia, vias_acceso } = req.query;
+        const { limit = 50, offset = 0, topografia, tipo_via_acceso } = req.query;
 
         let query = supabase
             .from('fincas')
@@ -26,8 +26,8 @@ router.get('/', async (req, res) => {
             query = query.eq('topografia', topografia);
         }
 
-        if (vias_acceso) {
-            query = query.eq('vias_acceso', vias_acceso);
+        if (tipo_via_acceso) {
+            query = query.eq('tipo_via_acceso', tipo_via_acceso);
         }
 
         const { data, error } = await query;

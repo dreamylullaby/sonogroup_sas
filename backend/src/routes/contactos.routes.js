@@ -17,7 +17,7 @@ router.post('/', verificarToken, async (req, res) => {
 
         const { data: usuario } = await supabase
             .from('usuarios')
-            .select('nombre:nombre_completo, email, telefono')
+            .select('nombre_completo, email, telefono')
             .eq('id_usuario', req.usuario.id_usuario)
             .single();
 

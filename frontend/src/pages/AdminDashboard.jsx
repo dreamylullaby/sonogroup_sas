@@ -9,11 +9,13 @@ const AdminDashboard = () => {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [stats, setStats] = useState({
-    totalPropiedades: 0, totalUsuarios: 0, propiedadesVenta: 0, propiedadesAlquiler: 0
+    totalPropiedades: 0, totalUsuarios: 0, propiedadesVenta: 0, propiedadesAlquiler: 0,
+    pendientes: 0, contactosSinResponder: 0, solicitudesCuenta: 0
   })
   const [usuarios, setUsuarios] = useState([])
   const [propiedadesPendientes, setPropiedadesPendientes] = useState([])
   const [propiedades, setPropiedades] = useState([])
+  const [solicitudesCuenta, setSolicitudesCuenta] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
@@ -28,25 +30,30 @@ const AdminDashboard = () => {
       setLoading(true)
       setError('')
 
-      const [usuariosRes, propiedadesRes, pendientesRes] = await Promise.all([
+      const [usuariosRes, propiedadesRes, pendientesRes, solicitudesCuentaRes] = await Promise.all([
         api.get('/api/usuarios'),
         api.get('/api/inmuebles?estado_aprobacion=aprobado'),
-        api.get('/api/propiedades-pendientes')
+        api.get('/api/propiedades-pendientes'),
+        api.get('/api/solicitudes-cuenta').catch(() => ({ data: { solicitudes: [] } }))
       ])
 
       const usuariosData = usuariosRes.data.usuarios || []
       const propiedadesData = propiedadesRes.data.inmuebles || []
       const pendientesData = pendientesRes.data.propiedades || []
+      const solicitudesData = solicitudesCuentaRes.data.solicitudes || []
 
       setUsuarios(usuariosData)
       setPropiedades(propiedadesData)
       setPropiedadesPendientes(pendientesData)
+      setSolicitudesCuenta(solicitudesData)
 
       setStats({
         totalPropiedades: propiedadesData.length,
         totalUsuarios: usuariosData.length,
         propiedadesVenta: propiedadesData.filter(p => p.tipo_operacion === 'venta').length,
-        propiedadesAlquiler: propiedadesData.filter(p => p.tipo_operacion === 'arriendo').length
+        propiedadesAlquiler: propiedadesData.filter(p => p.tipo_operacion === 'arriendo').length,
+        pendientes: pendientesData.filter(p => p.estado_aprobacion === 'pendiente').length,
+        solicitudesCuenta: solicitudesData.filter(s => s.estado === 'pendiente' || s.estado === 'en_revision').length
       })
     } catch (err) {
       setError(parseApiError(err))
@@ -122,6 +129,11 @@ const AdminDashboard = () => {
         <div className="stat-card">
           <div className="stat-info"><h3>{stats.propiedadesAlquiler}</h3><p>En Arriendo</p></div>
         </div>
+        {stats.solicitudesCuenta > 0 && (
+          <div className="stat-card">
+            <div className="stat-info"><h3>{stats.solicitudesCuenta}</h3><p>Solicitudes Cuenta</p></div>
+          </div>
+        )}
       </div>
 
       <div className="admin-tabs">
@@ -133,6 +145,12 @@ const AdminDashboard = () => {
           onClick={() => setActiveTab('pendientes')}>
           Pendientes ({propiedadesPendientes.filter(p => p.estado_aprobacion === 'pendiente').length})
         </button>
+        {solicitudesCuenta.filter(s => s.estado === 'pendiente' || s.estado === 'en_revision').length > 0 && (
+          <button className={`tab-button ${activeTab === 'solicitudes-cuenta' ? 'active' : ''}`}
+            onClick={() => setActiveTab('solicitudes-cuenta')}>
+            Solicitudes Cuenta ({solicitudesCuenta.filter(s => s.estado === 'pendiente' || s.estado === 'en_revision').length})
+          </button>
+        )}
       </div>
 
       {activeTab === 'usuarios' && (
@@ -182,6 +200,10 @@ const AdminDashboard = () => {
 
       {activeTab === 'pendientes' && (
         <PropiedadesPendientesSection propiedades={propiedadesPendientes} onUpdate={fetchData} />
+      )}
+
+      {activeTab === 'solicitudes-cuenta' && (
+        <SolicitudesCuentaSection solicitudes={solicitudesCuenta} onUpdate={fetchData} />
       )}
 
       <UserModal isOpen={modalOpen} onClose={() => setModalOpen(false)}
@@ -330,6 +352,71 @@ const PropiedadesPendientesSection = ({ propiedades, onUpdate }) => {
               </div>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+const SolicitudesCuentaSection = ({ solicitudes, onUpdate }) => {
+  const [error, setError] = useState('')
+
+  const pendientes = solicitudes.filter(s => s.estado === 'pendiente' || s.estado === 'en_revision')
+
+  const handleAprobar = async (id) => {
+    if (!window.confirm('¿Aprobar la eliminación de esta cuenta? El usuario será desactivado.')) return
+    try {
+      await api.put(`/api/solicitudes-cuenta/${id}/aprobar`, { nota_admin: 'Aprobada por admin' })
+      onUpdate()
+    } catch (err) {
+      setError(parseApiError(err))
+    }
+  }
+
+  const handleRechazar = async (id) => {
+    const nota = prompt('Nota para el usuario (opcional):')
+    try {
+      await api.put(`/api/solicitudes-cuenta/${id}/rechazar`, { nota_admin: nota || '' })
+      onUpdate()
+    } catch (err) {
+      setError(parseApiError(err))
+    }
+  }
+
+  return (
+    <div className="admin-section">
+      <div className="section-header"><h2>Solicitudes de Eliminación de Cuenta</h2></div>
+      {error && <div className="error-message">⚠️ {error}</div>}
+      {pendientes.length === 0 ? (
+        <div className="empty-state"><p>No hay solicitudes pendientes</p></div>
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>ID</th><th>Usuario</th><th>Email</th><th>Motivo</th>
+                <th>Fecha</th><th>Estado</th><th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pendientes.map(s => (
+                <tr key={s.id_solicitud}>
+                  <td>{s.id_solicitud}</td>
+                  <td>{s.usuarios?.nombre_completo || '—'}</td>
+                  <td>{s.usuarios?.email || '—'}</td>
+                  <td>{s.motivo?.substring(0, 50) || 'Sin motivo'}</td>
+                  <td>{new Date(s.fecha_solicitud).toLocaleDateString()}</td>
+                  <td><span className="badge">{s.estado}</span></td>
+                  <td>
+                    <div className="table-actions">
+                      <button className="btn-icon btn-edit" title="Aprobar" onClick={() => handleAprobar(s.id_solicitud)}>✅</button>
+                      <button className="btn-icon btn-delete" title="Rechazar" onClick={() => handleRechazar(s.id_solicitud)}>❌</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

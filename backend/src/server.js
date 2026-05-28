@@ -6,6 +6,7 @@ import { errorHandler, notFound } from './middleware/errorHandler.js';
 
 // Importar rutas
 import authRoutes from './routes/auth.routes.js';
+import passwordResetRoutes from './routes/password-reset.routes.js';
 import inmueblesRoutes from './routes/inmuebles.routes.js';
 import usuariosRoutes from './routes/usuarios.routes.js';
 import fotografiasRoutes from './routes/fotografias.routes.js';
@@ -15,6 +16,11 @@ import contactoGeneralRoutes from './routes/contacto-general.routes.js';
 import propiedadesPendientesRoutes from './routes/propiedades-pendientes.routes.js';
 import inmueblesAdminRoutes from './routes/inmuebles-admin.routes.js';
 import configuracionRoutes from './routes/configuracion.routes.js';
+import notificacionesRoutes from './routes/notificaciones.routes.js';
+import historialPreciosRoutes from './routes/historial-precios.routes.js';
+import caracteristicasRoutes from './routes/caracteristicas.routes.js';
+import solicitudesCuentaRoutes from './routes/solicitudes-cuenta.routes.js';
+import statsRoutes from './routes/stats.routes.js';
 import casasRoutes from './routes/casas.routes.js';
 import apartamentosRoutes from './routes/apartamentos.routes.js';
 import localesRoutes from './routes/locales.routes.js';
@@ -42,8 +48,18 @@ app.get('/', (req, res) => {
         endpoints: {
             autenticacion: '/api/auth',
             inmuebles: '/api/inmuebles',
+            inmuebles_admin: '/api/inmuebles-admin',
             usuarios: '/api/usuarios',
             fotografias: '/api/fotografias',
+            favoritos: '/api/favoritos',
+            contactos: '/api/contactos',
+            configuracion: '/api/configuracion',
+            notificaciones: '/api/notificaciones',
+            caracteristicas: '/api/caracteristicas',
+            historial_precios: '/api/historial-precios',
+            solicitudes_cuenta: '/api/solicitudes-cuenta',
+            stats: '/api/stats',
+            propiedades_pendientes: '/api/propiedades-pendientes',
             casas: '/api/casas',
             apartamentos: '/api/apartamentos',
             locales: '/api/locales',
@@ -54,23 +70,37 @@ app.get('/', (req, res) => {
         },
         tablas_disponibles: [
             'usuarios',
+            'configuracion_usuario',
+            'seguridad_usuario',
+            'sesiones_usuario',
+            'password_reset_tokens',
+            'configuracion',
             'inmuebles',
             'ubicaciones',
-            'servicios_publicos',
             'fotografias',
+            'caracteristicas_generales',
+            'inmuebles_caracteristicas',
             'casas',
             'apartamentos',
+            'apartaestudios',
             'locales',
             'bodegas',
             'fincas',
-            'apartaestudios',
-            'lotes'
+            'lotes',
+            'contactos',
+            'favoritos',
+            'solicitudes_publicacion',
+            'historial_precios',
+            'notificaciones',
+            'solicitudes_eliminacion_cuenta',
+            'keep_alive'
         ]
     });
 });
 
 // Rutas de la API
 app.use('/api/auth', authRoutes);
+app.use('/api/auth', passwordResetRoutes);
 app.use('/api/inmuebles', inmueblesRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/fotografias', fotografiasRoutes);
@@ -80,6 +110,11 @@ app.use('/api/contactos-general', contactoGeneralRoutes);
 app.use('/api/propiedades-pendientes', propiedadesPendientesRoutes);
 app.use('/api/inmuebles-admin', inmueblesAdminRoutes);
 app.use('/api/configuracion', configuracionRoutes);
+app.use('/api/notificaciones', notificacionesRoutes);
+app.use('/api/historial-precios', historialPreciosRoutes);
+app.use('/api/caracteristicas', caracteristicasRoutes);
+app.use('/api/solicitudes-cuenta', solicitudesCuentaRoutes);
+app.use('/api/stats', statsRoutes);
 
 // Rutas de tablas especializadas
 app.use('/api/casas', casasRoutes);

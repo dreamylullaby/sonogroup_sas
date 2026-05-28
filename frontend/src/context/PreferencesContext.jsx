@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import { api } from '../config/api'
 
 const PreferencesContext = createContext(null)
 
@@ -246,7 +247,7 @@ export const PreferencesProvider = ({ children }) => {
   useEffect(() => {
     const token = localStorage.getItem('token')
     if (!token) return
-    axios.get('/api/configuracion')
+    api.get('/api/configuracion')
       .then(res => {
         const c = res.data.configuracion
         if (c?.tema) setTema(c.tema)

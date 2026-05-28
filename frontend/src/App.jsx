@@ -9,6 +9,8 @@ import Home from './pages/Home'
 import Properties from './pages/Properties'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 import PropertyDetail from './pages/PropertyDetail'
 import Favorites from './pages/Favorites'
 import Contact from './pages/Contact'
@@ -37,6 +39,8 @@ function App() {
               <Route path="/propiedades" element={<Properties />} />
               <Route path="/login" element={<Login />} />
               <Route path="/registro" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/restablecer-password" element={<ResetPassword />} />
               <Route path="/propiedad/:id" element={<PropertyDetail />} />
               <Route path="/contacto" element={<Contact />} />
               <Route 
