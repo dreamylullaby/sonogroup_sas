@@ -84,8 +84,11 @@ code {
 }
 
 [data-theme="oscuro"] .navbar {
-  background: #0f1117 !important;
   border-bottom: 1px solid #2d3148;
+}
+
+[data-theme="oscuro"] .navbar-scrolled {
+  background: rgba(15, 17, 23, 0.97) !important;
 }
 
 [data-theme="oscuro"] .user-dropdown,
