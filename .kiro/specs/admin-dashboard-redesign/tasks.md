@@ -6,7 +6,7 @@ Implementación incremental del panel administrativo premium. Se comienza con la
 
 ## Tasks
 
-- [ ] 1. Instalar dependencias y configurar infraestructura base
+- [x] 1. Instalar dependencias y configurar infraestructura base
   - Instalar en frontend: `framer-motion`, `recharts`, `fast-check` (devDependency), `@testing-library/react`, `vitest`
   - Instalar en backend: `fast-check` (devDependency), `exceljs` (para exportación)
   - Configurar Vitest en `frontend/vite.config.js` con `test` block
@@ -14,30 +14,30 @@ Implementación incremental del panel administrativo premium. Se comienza con la
   - Agregar fuente Inter de Google Fonts en `frontend/index.html`
   - _Requirements: 12.1, 12.2, 12.3_
 
-- [ ] 2. Crear componentes compartidos del admin
-  - [ ] 2.1 Crear `StatusBadge.jsx` — badge de estado con colores del design system
+- [x] 2. Crear componentes compartidos del admin
+  - [x] 2.1 Crear `StatusBadge.jsx` — badge de estado con colores del design system
     - Props: `status`, `size`
     - Colores: pendiente=amber, aprobado=emerald, rechazado=red, activo=blue, suspendido=slate, respondido=purple, cerrado=gray
     - _Requirements: 12.8_
   - [ ]* 2.2 Escribir unit tests para StatusBadge
     - Verificar que cada valor de status produce la clase CSS correcta
     - _Requirements: 12.8_
-  - [ ] 2.3 Crear `EmptyState.jsx` — estado vacío con ilustración SVG y mensaje
+  - [x] 2.3 Crear `EmptyState.jsx` — estado vacío con ilustración SVG y mensaje
     - Props: `title`, `description`, `icon`
     - _Requirements: 12.5_
-  - [ ] 2.4 Crear `ConfirmDialog.jsx` — modal de confirmación reutilizable
+  - [x] 2.4 Crear `ConfirmDialog.jsx` — modal de confirmación reutilizable
     - Props: `open`, `title`, `description`, `onConfirm`, `onCancel`, `variant` (danger/warning)
     - _Requirements: 3.10, 5.7_
-  - [ ] 2.5 Crear `PageHeader.jsx` — encabezado de página con título, descripción y slot de acciones
+  - [x] 2.5 Crear `PageHeader.jsx` — encabezado de página con título, descripción y slot de acciones
     - _Requirements: 12.1_
-  - [ ] 2.6 Crear `SkeletonTable.jsx` y `SkeletonCard.jsx` — loaders de esqueleto
+  - [x] 2.6 Crear `SkeletonTable.jsx` y `SkeletonCard.jsx` — loaders de esqueleto
     - _Requirements: 12.4_
-  - [ ] 2.7 Crear `DataTable.jsx` — tabla reutilizable con sort, paginación y estado vacío
+  - [x] 2.7 Crear `DataTable.jsx` — tabla reutilizable con sort, paginación y estado vacío
     - Props: `columns`, `data`, `loading`, `pagination`, `onPageChange`, `onSort`, `emptyMessage`
     - _Requirements: 3.1, 5.1_
 
-- [ ] 3. Crear AdminLayout con Sidebar y Navbar
-  - [ ] 3.1 Crear `AdminSidebar.jsx` — sidebar colapsable con navegación completa
+- [x] 3. Crear AdminLayout con Sidebar y Navbar
+  - [x] 3.1 Crear `AdminSidebar.jsx` — sidebar colapsable con navegación completa
     - Estado collapsed/expanded en localStorage para persistencia
     - Items: Dashboard, Propiedades, Solicitudes, Usuarios, Contactos, Notificaciones, Reportes, Configuración, Seguridad, Actividad
     - Highlight del item activo con `useLocation()`
@@ -49,35 +49,35 @@ Implementación incremental del panel administrativo premium. Se comienza con la
     - `// Feature: admin-dashboard-redesign, Property 1: Sidebar toggle is idempotent in pairs`
     - Usar `fc.boolean()` para estado inicial
     - _Requirements: 1.2_
-  - [ ] 3.3 Crear `AdminNavbar.jsx` — navbar superior con búsqueda, notificaciones y menú usuario
+  - [x] 3.3 Crear `AdminNavbar.jsx` — navbar superior con búsqueda, notificaciones y menú usuario
     - Buscador global (placeholder, sin funcionalidad de búsqueda global en esta tarea)
     - Bell icon con badge de notificaciones no leídas
     - Dropdown de notificaciones (últimas 10)
     - Menú de usuario con logout
     - _Requirements: 1.8, 7.1, 7.2_
-  - [ ] 3.4 Crear `AdminLayout.jsx` — wrapper que combina Sidebar + Navbar + contenido
+  - [x] 3.4 Crear `AdminLayout.jsx` — wrapper que combina Sidebar + Navbar + contenido
     - Maneja estado collapsed del sidebar
     - Aplica padding-left dinámico según estado del sidebar
     - Animación de transición de página con Framer Motion `AnimatePresence`
     - _Requirements: 12.2_
-  - [ ] 3.5 Actualizar `App.jsx` para usar AdminLayout en rutas `/admin/*`
+  - [x] 3.5 Actualizar `App.jsx` para usar AdminLayout en rutas `/admin/*`
     - Crear rutas anidadas bajo `/admin` con `AdminLayout` como wrapper
     - Mantener rutas existentes sin cambios
     - _Requirements: 1.1_
 
-- [ ] 4. Checkpoint — Verificar layout base
+- [x] 4. Checkpoint — Verificar layout base
   - Asegurar que el sidebar se renderiza, colapsa y navega correctamente. Ejecutar tests existentes. Preguntar al usuario si hay dudas.
 
-- [ ] 5. Crear backend: endpoints de stats y dashboard
-  - [ ] 5.1 Crear `admin-stats.routes.js` con `GET /api/admin/stats/dashboard` y `GET /api/admin/stats/charts`
+- [x] 5. Crear backend: endpoints de stats y dashboard
+  - [x] 5.1 Crear `admin-stats.routes.js` con `GET /api/admin/stats/dashboard` y `GET /api/admin/stats/charts`
     - Proteger con `verificarToken` + `verificarRol(['admin'])`
     - _Requirements: 13.1, 13.2, 13.11_
-  - [ ] 5.2 Crear `stats.service.js` — lógica de cálculo de KPIs
+  - [x] 5.2 Crear `stats.service.js` — lógica de cálculo de KPIs
     - Consultar `inmuebles`, `usuarios`, `contactos`, `favoritos` en paralelo con `Promise.all`
     - Calcular cambios porcentuales vs período anterior (semana/mes)
     - Retornar estructura `{ kpis, changes }`
     - _Requirements: 2.2, 13.1_
-  - [ ] 5.3 Crear `stats.controller.js` — controlador que llama al servicio y formatea respuesta
+  - [x] 5.3 Crear `stats.controller.js` — controlador que llama al servicio y formatea respuesta
     - Respuesta consistente `{ success: true, data: {...} }`
     - _Requirements: 13.12_
   - [ ]* 5.4 Escribir property test para pagination invariant (Property 3)
@@ -91,8 +91,8 @@ Implementación incremental del panel administrativo premium. Se comienza con la
     - Verificar que todas las respuestas de error tienen `success: false` y `error`
     - _Requirements: 13.12_
 
-- [ ] 6. Crear Dashboard principal
-  - [ ] 6.1 Crear `KPICard.jsx` — tarjeta de métrica con sparkline, tendencia y cambio porcentual
+- [x] 6. Crear Dashboard principal
+  - [x] 6.1 Crear `KPICard.jsx` — tarjeta de métrica con sparkline, tendencia y cambio porcentual
     - Props: `title`, `value`, `change`, `trend`, `icon`, `color`, `sparklineData`
     - Mini sparkline con Recharts `AreaChart` (sin ejes, solo línea)
     - Icono de tendencia (TrendingUp/TrendingDown de Lucide)
@@ -101,17 +101,17 @@ Implementación incremental del panel administrativo premium. Se comienza con la
     - `// Feature: admin-dashboard-redesign, Property 2: KPI card renders all required fields`
     - Usar `fc.record({title: fc.string(), value: fc.integer(), change: fc.float(), trend: fc.constantFrom('up','down','neutral'), sparklineData: fc.array(fc.integer(), {minLength:7, maxLength:7})})`
     - _Requirements: 2.4_
-  - [ ] 6.3 Crear `KPICardSkeleton.jsx` — skeleton loader para KPICard
+  - [x] 6.3 Crear `KPICardSkeleton.jsx` — skeleton loader para KPICard
     - _Requirements: 2.3_
-  - [ ] 6.4 Crear `PublicationsBarChart.jsx` — gráfica de barras de publicaciones por mes (Recharts)
+  - [x] 6.4 Crear `PublicationsBarChart.jsx` — gráfica de barras de publicaciones por mes (Recharts)
     - _Requirements: 2.5_
-  - [ ] 6.5 Crear `UsersLineChart.jsx` — gráfica de línea de crecimiento de usuarios (Recharts)
+  - [x] 6.5 Crear `UsersLineChart.jsx` — gráfica de línea de crecimiento de usuarios (Recharts)
     - _Requirements: 2.6_
-  - [ ] 6.6 Crear `PropertyTypeDonut.jsx` — gráfica donut de distribución de tipos (Recharts)
+  - [x] 6.6 Crear `PropertyTypeDonut.jsx` — gráfica donut de distribución de tipos (Recharts)
     - _Requirements: 2.7_
-  - [ ] 6.7 Crear `ActivityFeed.jsx` — feed de actividad reciente (últimas 10 acciones)
+  - [x] 6.7 Crear `ActivityFeed.jsx` — feed de actividad reciente (últimas 10 acciones)
     - _Requirements: 2.8_
-  - [ ] 6.8 Crear `AdminDashboard.jsx` (nuevo) — página principal que integra todos los widgets
+  - [x] 6.8 Crear `AdminDashboard.jsx` (nuevo) — página principal que integra todos los widgets
     - Fetch a `GET /api/admin/stats/dashboard` y `GET /api/admin/stats/charts`
     - Grid de 4 KPI cards en la primera fila, luego 3 más
     - Dos gráficas en segunda fila, donut + activity feed en tercera
@@ -119,7 +119,7 @@ Implementación incremental del panel administrativo premium. Se comienza con la
     - Skeleton loaders mientras carga
     - Error state con retry si falla
     - _Requirements: 2.1, 2.2, 2.3, 2.8, 2.9, 2.10, 2.11_
-  - [ ] 6.9 Crear hook `useAdminStats.js` — encapsula fetch de stats con loading/error state
+  - [x] 6.9 Crear hook `useAdminStats.js` — encapsula fetch de stats con loading/error state
     - _Requirements: 2.2_
 
 - [ ] 7. Checkpoint — Verificar dashboard
