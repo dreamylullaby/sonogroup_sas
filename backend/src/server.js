@@ -28,6 +28,7 @@ import bodegasRoutes from './routes/bodegas.routes.js';
 import fincasRoutes from './routes/fincas.routes.js';
 import apartaestudiosRoutes from './routes/apartaestudios.routes.js';
 import lotesRoutes from './routes/lotes.routes.js';
+import adminStatsRoutes from './routes/admin/admin-stats.routes.js';
 
 dotenv.config();
 
@@ -124,6 +125,9 @@ app.use('/api/bodegas', bodegasRoutes);
 app.use('/api/fincas', fincasRoutes);
 app.use('/api/apartaestudios', apartaestudiosRoutes);
 app.use('/api/lotes', lotesRoutes);
+
+// Rutas admin consolidadas
+app.use('/api/admin/stats', adminStatsRoutes);
 
 // Middleware de manejo de errores
 app.use(notFound);
