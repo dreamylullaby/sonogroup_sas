@@ -45,6 +45,9 @@ export default function AdminLayout() {
     setMobileOpen(false)
   }, [location.pathname])
 
+  // Use inline style for margin-left to guarantee correct pixel values
+  const contentMargin = isMobile ? 0 : collapsed ? 64 : 256
+
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50 font-sans">
       <AdminSidebar
@@ -54,11 +57,10 @@ export default function AdminLayout() {
         onMobileClose={() => setMobileOpen(false)}
       />
 
-      {/* Content area with margin transition matching sidebar width */}
+      {/* Content area — margin-left matches sidebar width exactly */}
       <div
-        className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${
-          isMobile ? 'ml-0' : collapsed ? 'ml-16' : 'ml-64'
-        }`}
+        className="flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out"
+        style={{ marginLeft: contentMargin }}
       >
         <AdminNavbar onMobileMenuToggle={() => setMobileOpen(prev => !prev)} />
 

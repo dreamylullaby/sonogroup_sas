@@ -62,8 +62,12 @@ export default function AdminSidebar({ collapsed, onToggle, mobileOpen, onMobile
         <button
           onClick={() => handleNavClick(item.path)}
           className={`
-            w-full flex items-center gap-3 px-3 py-2.5 mx-2 rounded-lg text-sm font-medium
+            w-full flex items-center rounded-lg text-sm font-medium
             transition-all duration-200 relative group
+            ${collapsed
+              ? 'justify-center px-0 py-2.5 mx-auto'
+              : 'gap-3 px-3 py-2.5 mx-2'
+            }
             ${active
               ? 'bg-indigo-500/10 text-indigo-400 border-l-2 border-indigo-500'
               : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -73,7 +77,7 @@ export default function AdminSidebar({ collapsed, onToggle, mobileOpen, onMobile
         >
           <Icon size={18} className="flex-shrink-0" />
           <span
-            className={`whitespace-nowrap transition-all duration-300 ${
+            className={`whitespace-nowrap transition-all duration-200 ${
               collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'
             }`}
           >
@@ -91,19 +95,19 @@ export default function AdminSidebar({ collapsed, onToggle, mobileOpen, onMobile
   }
 
   const sidebarContent = (
-    <div className="flex flex-col h-full bg-[#0f172a] text-white">
+    <div className="flex flex-col h-full bg-[#0f172a] border-r border-white/10 text-white">
       {/* Logo area */}
-      <div className="flex items-center h-14 px-4 border-b border-white/5">
-        <div className="flex items-center gap-3 overflow-hidden">
-          <span className="text-indigo-400 text-lg">●</span>
-          <span
-            className={`font-bold text-sm tracking-wide text-white whitespace-nowrap transition-all duration-300 ${
-              collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'
-            }`}
-          >
-            SONOGROUP
-          </span>
-        </div>
+      <div className={`flex items-center h-14 border-b border-white/5 ${collapsed ? 'justify-center px-2' : 'px-4'}`}>
+        {collapsed ? (
+          <span className="text-indigo-400 font-bold text-lg">S</span>
+        ) : (
+          <div className="flex items-center gap-3 overflow-hidden">
+            <span className="text-indigo-400 text-lg">●</span>
+            <span className="font-bold text-sm tracking-wide text-white whitespace-nowrap">
+              SONOGROUP
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Main navigation */}
@@ -127,6 +131,15 @@ export default function AdminSidebar({ collapsed, onToggle, mobileOpen, onMobile
 
       {/* User info + collapse toggle */}
       <div className="border-t border-white/5 p-3">
+        {collapsed && user && (
+          <div className="flex justify-center mb-3">
+            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0">
+              <span className="text-xs font-semibold text-white">
+                {user.nombre?.charAt(0)?.toUpperCase() || 'A'}
+              </span>
+            </div>
+          </div>
+        )}
         {!collapsed && user && (
           <div className="flex items-center gap-3 mb-3 px-2">
             <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0">
@@ -142,13 +155,15 @@ export default function AdminSidebar({ collapsed, onToggle, mobileOpen, onMobile
             </div>
           </div>
         )}
-        <button
-          onClick={onToggle}
-          className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all duration-200"
-          aria-label={collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
-        >
-          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-        </button>
+        <div className={`flex ${collapsed ? 'justify-center' : ''} w-full py-1`}>
+          <button
+            onClick={onToggle}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all duration-200"
+            aria-label={collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
+          >
+            {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -157,7 +172,7 @@ export default function AdminSidebar({ collapsed, onToggle, mobileOpen, onMobile
     <>
       {/* Desktop sidebar */}
       <motion.aside
-        className="hidden md:block fixed top-0 left-0 h-screen z-40"
+        className="hidden md:block fixed top-0 left-0 h-screen z-40 bg-[#0f172a]"
         animate={{ width: collapsed ? 64 : 256 }}
         transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
       >
@@ -180,7 +195,7 @@ export default function AdminSidebar({ collapsed, onToggle, mobileOpen, onMobile
               animate={{ x: 0 }}
               exit={{ x: -256 }}
               transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-              className="fixed top-0 left-0 h-screen w-64 z-50 md:hidden"
+              className="fixed top-0 left-0 h-screen w-64 z-50 md:hidden bg-[#0f172a]"
             >
               <button
                 onClick={onMobileClose}
