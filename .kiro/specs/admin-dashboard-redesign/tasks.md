@@ -1,0 +1,355 @@
+# Implementation Plan: Admin Dashboard Redesign — SONOGROUP S.A.S.
+
+## Overview
+
+Implementación incremental del panel administrativo premium. Se comienza con la infraestructura base (layout, routing, componentes compartidos), luego los módulos de mayor valor (dashboard, propiedades, usuarios), y finalmente los módulos secundarios (CRM, reportes, seguridad). Cada tarea construye sobre la anterior y termina con código integrado y funcional.
+
+## Tasks
+
+- [ ] 1. Instalar dependencias y configurar infraestructura base
+  - Instalar en frontend: `framer-motion`, `recharts`, `fast-check` (devDependency), `@testing-library/react`, `vitest`
+  - Instalar en backend: `fast-check` (devDependency), `exceljs` (para exportación)
+  - Configurar Vitest en `frontend/vite.config.js` con `test` block
+  - Configurar Vitest en `backend` con `vitest.config.js`
+  - Agregar fuente Inter de Google Fonts en `frontend/index.html`
+  - _Requirements: 12.1, 12.2, 12.3_
+
+- [ ] 2. Crear componentes compartidos del admin
+  - [ ] 2.1 Crear `StatusBadge.jsx` — badge de estado con colores del design system
+    - Props: `status`, `size`
+    - Colores: pendiente=amber, aprobado=emerald, rechazado=red, activo=blue, suspendido=slate, respondido=purple, cerrado=gray
+    - _Requirements: 12.8_
+  - [ ]* 2.2 Escribir unit tests para StatusBadge
+    - Verificar que cada valor de status produce la clase CSS correcta
+    - _Requirements: 12.8_
+  - [ ] 2.3 Crear `EmptyState.jsx` — estado vacío con ilustración SVG y mensaje
+    - Props: `title`, `description`, `icon`
+    - _Requirements: 12.5_
+  - [ ] 2.4 Crear `ConfirmDialog.jsx` — modal de confirmación reutilizable
+    - Props: `open`, `title`, `description`, `onConfirm`, `onCancel`, `variant` (danger/warning)
+    - _Requirements: 3.10, 5.7_
+  - [ ] 2.5 Crear `PageHeader.jsx` — encabezado de página con título, descripción y slot de acciones
+    - _Requirements: 12.1_
+  - [ ] 2.6 Crear `SkeletonTable.jsx` y `SkeletonCard.jsx` — loaders de esqueleto
+    - _Requirements: 12.4_
+  - [ ] 2.7 Crear `DataTable.jsx` — tabla reutilizable con sort, paginación y estado vacío
+    - Props: `columns`, `data`, `loading`, `pagination`, `onPageChange`, `onSort`, `emptyMessage`
+    - _Requirements: 3.1, 5.1_
+
+- [ ] 3. Crear AdminLayout con Sidebar y Navbar
+  - [ ] 3.1 Crear `AdminSidebar.jsx` — sidebar colapsable con navegación completa
+    - Estado collapsed/expanded en localStorage para persistencia
+    - Items: Dashboard, Propiedades, Solicitudes, Usuarios, Contactos, Notificaciones, Reportes, Configuración, Seguridad, Actividad
+    - Highlight del item activo con `useLocation()`
+    - Logo SONOGROUP + info del usuario admin al fondo
+    - Animación con Framer Motion (width transition)
+    - Responsive: overlay en mobile < 768px
+    - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.9_
+  - [ ]* 3.2 Escribir property test para sidebar toggle (Property 1)
+    - `// Feature: admin-dashboard-redesign, Property 1: Sidebar toggle is idempotent in pairs`
+    - Usar `fc.boolean()` para estado inicial
+    - _Requirements: 1.2_
+  - [ ] 3.3 Crear `AdminNavbar.jsx` — navbar superior con búsqueda, notificaciones y menú usuario
+    - Buscador global (placeholder, sin funcionalidad de búsqueda global en esta tarea)
+    - Bell icon con badge de notificaciones no leídas
+    - Dropdown de notificaciones (últimas 10)
+    - Menú de usuario con logout
+    - _Requirements: 1.8, 7.1, 7.2_
+  - [ ] 3.4 Crear `AdminLayout.jsx` — wrapper que combina Sidebar + Navbar + contenido
+    - Maneja estado collapsed del sidebar
+    - Aplica padding-left dinámico según estado del sidebar
+    - Animación de transición de página con Framer Motion `AnimatePresence`
+    - _Requirements: 12.2_
+  - [ ] 3.5 Actualizar `App.jsx` para usar AdminLayout en rutas `/admin/*`
+    - Crear rutas anidadas bajo `/admin` con `AdminLayout` como wrapper
+    - Mantener rutas existentes sin cambios
+    - _Requirements: 1.1_
+
+- [ ] 4. Checkpoint — Verificar layout base
+  - Asegurar que el sidebar se renderiza, colapsa y navega correctamente. Ejecutar tests existentes. Preguntar al usuario si hay dudas.
+
+- [ ] 5. Crear backend: endpoints de stats y dashboard
+  - [ ] 5.1 Crear `admin-stats.routes.js` con `GET /api/admin/stats/dashboard` y `GET /api/admin/stats/charts`
+    - Proteger con `verificarToken` + `verificarRol(['admin'])`
+    - _Requirements: 13.1, 13.2, 13.11_
+  - [ ] 5.2 Crear `stats.service.js` — lógica de cálculo de KPIs
+    - Consultar `inmuebles`, `usuarios`, `contactos`, `favoritos` en paralelo con `Promise.all`
+    - Calcular cambios porcentuales vs período anterior (semana/mes)
+    - Retornar estructura `{ kpis, changes }`
+    - _Requirements: 2.2, 13.1_
+  - [ ] 5.3 Crear `stats.controller.js` — controlador que llama al servicio y formatea respuesta
+    - Respuesta consistente `{ success: true, data: {...} }`
+    - _Requirements: 13.12_
+  - [ ]* 5.4 Escribir property test para pagination invariant (Property 3)
+    - `// Feature: admin-dashboard-redesign, Property 3: Pagination invariant`
+    - Usar `fc.integer({min:1, max:100})` para page y limit
+    - Verificar que `data.length <= limit` y `pagination.totalPages = ceil(total/limit)`
+    - _Requirements: 3.5, 5.10_
+  - [ ]* 5.5 Escribir property test para API response structure (Property 11)
+    - `// Feature: admin-dashboard-redesign, Property 11: Admin API response structure consistency`
+    - Verificar que todas las respuestas exitosas tienen `success: true` y `data`
+    - Verificar que todas las respuestas de error tienen `success: false` y `error`
+    - _Requirements: 13.12_
+
+- [ ] 6. Crear Dashboard principal
+  - [ ] 6.1 Crear `KPICard.jsx` — tarjeta de métrica con sparkline, tendencia y cambio porcentual
+    - Props: `title`, `value`, `change`, `trend`, `icon`, `color`, `sparklineData`
+    - Mini sparkline con Recharts `AreaChart` (sin ejes, solo línea)
+    - Icono de tendencia (TrendingUp/TrendingDown de Lucide)
+    - _Requirements: 2.4_
+  - [ ]* 6.2 Escribir property test para KPI card (Property 2)
+    - `// Feature: admin-dashboard-redesign, Property 2: KPI card renders all required fields`
+    - Usar `fc.record({title: fc.string(), value: fc.integer(), change: fc.float(), trend: fc.constantFrom('up','down','neutral'), sparklineData: fc.array(fc.integer(), {minLength:7, maxLength:7})})`
+    - _Requirements: 2.4_
+  - [ ] 6.3 Crear `KPICardSkeleton.jsx` — skeleton loader para KPICard
+    - _Requirements: 2.3_
+  - [ ] 6.4 Crear `PublicationsBarChart.jsx` — gráfica de barras de publicaciones por mes (Recharts)
+    - _Requirements: 2.5_
+  - [ ] 6.5 Crear `UsersLineChart.jsx` — gráfica de línea de crecimiento de usuarios (Recharts)
+    - _Requirements: 2.6_
+  - [ ] 6.6 Crear `PropertyTypeDonut.jsx` — gráfica donut de distribución de tipos (Recharts)
+    - _Requirements: 2.7_
+  - [ ] 6.7 Crear `ActivityFeed.jsx` — feed de actividad reciente (últimas 10 acciones)
+    - _Requirements: 2.8_
+  - [ ] 6.8 Crear `AdminDashboard.jsx` (nuevo) — página principal que integra todos los widgets
+    - Fetch a `GET /api/admin/stats/dashboard` y `GET /api/admin/stats/charts`
+    - Grid de 4 KPI cards en la primera fila, luego 3 más
+    - Dos gráficas en segunda fila, donut + activity feed en tercera
+    - Tablas de propiedades recientes y solicitudes pendientes al fondo
+    - Skeleton loaders mientras carga
+    - Error state con retry si falla
+    - _Requirements: 2.1, 2.2, 2.3, 2.8, 2.9, 2.10, 2.11_
+  - [ ] 6.9 Crear hook `useAdminStats.js` — encapsula fetch de stats con loading/error state
+    - _Requirements: 2.2_
+
+- [ ] 7. Checkpoint — Verificar dashboard
+  - Asegurar que el dashboard carga KPIs, muestra skeletons y renderiza gráficas. Ejecutar property tests P2 y P3. Preguntar al usuario si hay dudas.
+
+- [ ] 8. Crear backend: endpoints de propiedades admin
+  - [ ] 8.1 Crear `admin-inmuebles.routes.js` con todos los endpoints de gestión de propiedades
+    - `GET /api/admin/inmuebles` — lista paginada con filtros
+    - `PUT /api/admin/inmuebles/:id/aprobar`
+    - `PUT /api/admin/inmuebles/:id/rechazar`
+    - `PUT /api/admin/inmuebles/:id/destacar`
+    - `PUT /api/admin/inmuebles/:id/pausar`
+    - `DELETE /api/admin/inmuebles/:id`
+    - Todos protegidos con `verificarToken` + `verificarRol(['admin'])`
+    - _Requirements: 13.3, 13.4, 13.11_
+  - [ ] 8.2 Crear `inmuebles.service.js` (admin) — lógica de consultas con filtros y paginación
+    - Usar vista `v_inmuebles_admin` (JOIN con ubicaciones, fotografias, usuarios)
+    - Aplicar filtros: `.ilike()`, `.eq()`, `.gte()`, `.lte()`, `.range()`
+    - _Requirements: 3.1, 3.3, 3.4, 3.5_
+  - [ ] 8.3 Crear `inmuebles.controller.js` (admin) — controladores con respuesta consistente
+    - Registrar cada acción en `actividad_admin`
+    - _Requirements: 13.12, 10.7_
+  - [ ]* 8.4 Escribir property test para search filter consistency (Property 4)
+    - `// Feature: admin-dashboard-redesign, Property 4: Search filter consistency`
+    - Usar `fc.string({minLength:1})` para query
+    - Verificar que todos los resultados contienen el query en descripcion o municipio (case-insensitive)
+    - _Requirements: 3.2_
+  - [ ]* 8.5 Escribir property test para admin endpoint authorization (Property 10)
+    - `// Feature: admin-dashboard-redesign, Property 10: Admin endpoint authorization`
+    - Usar `fc.string()` para tokens inválidos
+    - Verificar que todos los endpoints `/api/admin/*` retornan 401/403 sin token válido de admin
+    - _Requirements: 13.11_
+
+- [ ] 9. Crear módulo de gestión de propiedades (frontend)
+  - [ ] 9.1 Crear `PropertyFiltersBar.jsx` — barra de filtros con search, dropdowns y reset
+    - Sincronizar filtros con URL query params usando `useSearchParams`
+    - _Requirements: 3.2, 3.3, 3.13_
+  - [ ]* 9.2 Escribir property test para URL filter round-trip (Property 5)
+    - `// Feature: admin-dashboard-redesign, Property 5: URL filter round-trip`
+    - Usar `fc.record({tipo: fc.constantFrom(...tipos), operacion: fc.constantFrom(...ops), estado: fc.constantFrom(...estados)})`
+    - Serializar a URLSearchParams y parsear de vuelta, verificar equivalencia
+    - _Requirements: 3.13_
+  - [ ] 9.3 Crear `PropertyRow.jsx` — fila de tabla con imagen, datos y acciones rápidas
+    - Acciones: Aprobar, Rechazar, Destacar, Pausar, Ver Detalle, Eliminar
+    - Usar `StatusBadge` para estado_aprobacion
+    - _Requirements: 3.1, 3.6, 3.7, 3.8, 3.9, 3.10_
+  - [ ] 9.4 Crear `RejectModal.jsx` — modal para ingresar motivo de rechazo
+    - Validar mínimo 10 caracteres antes de habilitar botón de confirmar
+    - _Requirements: 3.7_
+  - [ ] 9.5 Crear `AdminProperties.jsx` — página completa de gestión de propiedades
+    - Integra `PropertyFiltersBar`, `DataTable`, `PropertyRow`, `RejectModal`, `ConfirmDialog`
+    - Fetch a `GET /api/admin/inmuebles` con query params de filtros y paginación
+    - Actualización optimista de estado al aprobar/rechazar/pausar
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.11, 3.12_
+  - [ ] 9.6 Crear `AdminPropertyDetail.jsx` — vista detalle de propiedad para admin
+    - Galería de fotos, información completa, estadísticas (vistas, favoritos, contactos)
+    - Historial de precios (usando endpoint existente `/api/historial-precios`)
+    - Timeline de actividad de la propiedad
+    - _Requirements: 3.11_
+  - [ ] 9.7 Crear hook `useAdminProperties.js` — encapsula fetch, filtros y acciones
+    - _Requirements: 3.1_
+
+- [ ] 10. Crear módulo de solicitudes y moderación
+  - [ ] 10.1 Crear `AdminSolicitudes.jsx` — página de moderación con tabla y acciones bulk
+    - Reutilizar endpoint existente `GET /api/propiedades-pendientes`
+    - Columnas: imagen, propiedad, usuario, fecha, estado badge, prioridad badge, acciones
+    - Lógica de badge "urgente" para solicitudes > 48 horas
+    - Selección múltiple para acciones bulk (aprobar/rechazar todos)
+    - _Requirements: 4.1, 4.7, 4.8_
+  - [ ]* 10.2 Escribir property test para rejection reason length (Property 6)
+    - `// Feature: admin-dashboard-redesign, Property 6: Rejection reason minimum length`
+    - Usar `fc.string({maxLength: 9})` para razones inválidas
+    - Verificar que el botón de confirmar está deshabilitado para cualquier string < 10 chars
+    - _Requirements: 4.5_
+  - [ ]* 10.3 Escribir property test para urgente badge timing (Property 7)
+    - `// Feature: admin-dashboard-redesign, Property 7: Urgente badge timing`
+    - Usar `fc.date({max: new Date(Date.now() - 48*60*60*1000 - 1)})` para fechas > 48h atrás
+    - Verificar que la función `isUrgente(created_at)` retorna true para esas fechas
+    - _Requirements: 4.8_
+  - [ ] 10.4 Crear `SolicitudDetail.jsx` — vista detalle con información completa y galería
+    - _Requirements: 4.2, 4.3_
+  - [ ] 10.5 Agregar endpoint `GET /api/admin/solicitudes/:id/historial` en backend
+    - Retorna historial de revisiones de una solicitud
+    - _Requirements: 4.6_
+
+- [ ] 11. Crear backend y frontend: gestión de usuarios
+  - [ ] 11.1 Crear `admin-usuarios.routes.js` con endpoints de gestión de usuarios
+    - `GET /api/admin/usuarios` — lista paginada con filtros
+    - `PUT /api/usuarios/:id/suspender`
+    - `PUT /api/usuarios/:id/activar`
+    - `DELETE /api/admin/usuarios/:id/sesiones`
+    - Todos protegidos con middleware admin
+    - _Requirements: 13.5, 13.6, 13.11_
+  - [ ] 11.2 Crear `usuarios.service.js` (admin) — lógica de consultas y acciones
+    - _Requirements: 5.1, 5.5, 5.6, 5.9_
+  - [ ] 11.3 Crear `UserEditModal.jsx` — modal de edición de usuario con todos los campos
+    - Campos: nombre, email, teléfono, rol, estado
+    - _Requirements: 5.4_
+  - [ ] 11.4 Crear `AdminUsers.jsx` — página completa de gestión de usuarios
+    - Integra `DataTable`, `UserEditModal`, `ConfirmDialog`, `StatusBadge`
+    - Fetch a `GET /api/admin/usuarios` con filtros y paginación
+    - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 5.10, 5.11_
+  - [ ] 11.5 Crear hook `useAdminUsers.js`
+    - _Requirements: 5.1_
+
+- [ ] 12. Checkpoint — Verificar módulos principales
+  - Asegurar que propiedades, solicitudes y usuarios funcionan con sus respectivos endpoints. Ejecutar property tests P4, P5, P6, P7, P10. Preguntar al usuario si hay dudas.
+
+- [ ] 13. Crear CRM de contactos
+  - [ ] 13.1 Crear `admin-contactos.routes.js` con endpoints del CRM
+    - `GET /api/admin/contactos` — lista paginada con filtros
+    - `POST /api/admin/contactos/:id/notas`
+    - `PUT /api/admin/contactos/:id/asignar`
+    - `PUT /api/admin/contactos/:id/archivar`
+    - `PUT /api/contactos/:id/estado` (reutilizar existente o crear)
+    - _Requirements: 13.7, 13.8, 13.11_
+  - [ ] 13.2 Crear `contactos.service.js` (admin) — lógica de CRM
+    - _Requirements: 6.1, 6.4, 6.5, 6.6, 6.7_
+  - [ ] 13.3 Crear `ContactDetail.jsx` — vista de conversación tipo inbox con notas internas
+    - _Requirements: 6.3, 6.4_
+  - [ ] 13.4 Crear `AdminContacts.jsx` — página CRM completa
+    - Integra tabla, filtros, `ContactDetail`, badge de pendientes
+    - _Requirements: 6.1, 6.2, 6.8, 6.9_
+  - [ ]* 13.5 Escribir property test para contact badge count (Property 8)
+    - `// Feature: admin-dashboard-redesign, Property 8: Contact badge count accuracy`
+    - Usar `fc.array(fc.record({estado_contacto: fc.constantFrom('pendiente','respondido','cerrado'), archivado: fc.boolean()}))`
+    - Verificar que el count del badge = items con estado='pendiente' AND archivado=false
+    - _Requirements: 6.8_
+  - [ ] 13.6 Crear hook `useAdminContacts.js`
+    - _Requirements: 6.1_
+
+- [ ] 14. Crear sistema de notificaciones completo
+  - [ ] 14.1 Actualizar `AdminNavbar.jsx` para mostrar dropdown de notificaciones funcional
+    - Fetch a `GET /api/notificaciones` (endpoint existente)
+    - Marcar como leída al hacer click
+    - Badge con count de no leídas
+    - _Requirements: 7.1, 7.2, 7.3_
+  - [ ]* 14.2 Escribir property test para notification badge count (Property 9)
+    - `// Feature: admin-dashboard-redesign, Property 9: Notification badge count accuracy`
+    - Usar `fc.array(fc.record({leido: fc.boolean()}))`
+    - Verificar que badge count = items con leido=false
+    - _Requirements: 7.1_
+  - [ ] 14.3 Crear `AdminNotifications.jsx` — página completa de notificaciones con paginación y filtros
+    - _Requirements: 7.6_
+  - [ ] 14.4 Crear hook `useAdminNotifications.js`
+    - _Requirements: 7.1_
+
+- [ ] 15. Crear módulo de reportes y analytics
+  - [ ] 15.1 Crear `admin-reportes.routes.js` con endpoints de analytics y exportación
+    - `GET /api/admin/reportes/stats` — métricas avanzadas con filtro de fecha
+    - `GET /api/admin/reportes/export?format=xlsx`
+    - _Requirements: 13.10, 13.11_
+  - [ ] 15.2 Crear `reportes.service.js` — lógica de cálculo de métricas y generación de Excel
+    - Top 10 propiedades más vistas, top 5 municipios, top 5 usuarios activos
+    - Tabla de métricas mensuales
+    - Exportación con `exceljs`
+    - _Requirements: 8.1, 8.4_
+  - [ ]* 15.3 Escribir property test para analytics date range (Property 12)
+    - `// Feature: admin-dashboard-redesign, Property 12: Analytics date range filter`
+    - Usar `fc.tuple(fc.date(), fc.date()).map(([a,b]) => [min(a,b), max(a,b)])` para rangos válidos
+    - Verificar que todos los data points caen dentro del rango
+    - _Requirements: 8.3_
+  - [ ] 15.4 Crear `AdminReports.jsx` — página de analytics con gráficas y exportación
+    - Selector de rango de fechas (7d, 30d, 90d, custom)
+    - Gráficas: top propiedades, zonas, usuarios activos, métricas mensuales
+    - Botones de exportar Excel y PDF
+    - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.6_
+
+- [ ] 16. Crear módulo de configuración
+  - [ ] 16.1 Crear `AdminConfig.jsx` — página de configuración con tabs
+    - Tabs: Empresa, Branding, Contacto, SEO, Redes Sociales, Mantenimiento
+    - Reutilizar endpoints existentes de `/api/configuracion`
+    - Toggle de modo mantenimiento
+    - Upload de logo
+    - Toast de éxito/error al guardar
+    - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6_
+
+- [ ] 17. Crear módulo de seguridad
+  - [ ] 17.1 Crear `admin-sesiones.routes.js` con endpoints de gestión de sesiones
+    - `GET /api/admin/sesiones` — todas las sesiones activas
+    - `DELETE /api/admin/sesiones/:id` — cerrar sesión específica
+    - `DELETE /api/admin/sesiones/todas` — cerrar todas excepto la actual
+    - _Requirements: 13.11_
+  - [ ] 17.2 Crear `AdminSecurity.jsx` — página de seguridad con sesiones activas, logs y auditoría
+    - Tabla de sesiones activas con dispositivo, IP, última actividad
+    - Log de accesos (usando `actividad_admin`)
+    - Highlight de actividad sospechosa (múltiples fallos de login)
+    - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6_
+
+- [ ] 18. Crear feed de actividad
+  - [ ] 18.1 Crear `admin-actividad.routes.js` con `GET /api/admin/actividad`
+    - Soporte para query params: page, limit, tipo
+    - _Requirements: 13.9, 13.11_
+  - [ ] 18.2 Crear `actividad.service.js` — consulta paginada de `actividad_admin`
+    - _Requirements: 11.1, 11.5_
+  - [ ] 18.3 Crear `AdminActivity.jsx` — página de feed de actividad con infinite scroll
+    - Filtros por tipo: usuarios, propiedades, aprobaciones, contactos, sistema
+    - Infinite scroll cargando 25 más al llegar al fondo
+    - _Requirements: 11.1, 11.2, 11.3, 11.4_
+
+- [ ] 19. Registrar todas las nuevas rutas en server.js
+  - Importar y montar todos los nuevos routers de `/api/admin/*` en `backend/src/server.js`
+  - Verificar que no hay conflictos con rutas existentes
+  - _Requirements: 13.1, 13.3, 13.5, 13.7, 13.9, 13.10_
+
+- [ ] 20. Checkpoint final — Verificar sistema completo
+  - Ejecutar todos los property tests (P1–P12)
+  - Verificar navegación completa del sidebar
+  - Verificar que todas las páginas cargan sin errores
+  - Verificar responsive en mobile
+  - Preguntar al usuario si hay dudas o ajustes finales.
+
+- [ ] 21. SQL: Scripts de extensión de base de datos
+  - Crear archivo `backend/sql/admin_dashboard_extensions.sql` con todos los scripts necesarios:
+    - `CREATE TABLE actividad_admin`
+    - `CREATE TABLE notas_contacto`
+    - `ALTER TABLE inmuebles ADD COLUMN destacado, vistas`
+    - `CREATE TYPE estado_usuario` + `ALTER TABLE usuarios ADD COLUMN estado_usuario, ultimo_acceso`
+    - `CREATE TYPE prioridad_contacto` + `ALTER TABLE contactos ADD COLUMN agente_asignado_id, prioridad, archivado`
+    - `CREATE INDEX` para todas las columnas de búsqueda frecuente
+    - `CREATE OR REPLACE VIEW v_inmuebles_admin`
+    - `CREATE OR REPLACE VIEW v_dashboard_stats`
+    - `CREATE TRIGGER trg_update_ultimo_acceso`
+  - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5, 14.6, 14.7, 14.8, 14.9, 14.10, 14.11, 14.12, 14.13_
+
+## Notes
+
+- Las tareas marcadas con `*` son opcionales (tests) y pueden omitirse para un MVP más rápido
+- Cada tarea referencia requisitos específicos para trazabilidad
+- Los checkpoints garantizan validación incremental
+- Los property tests usan fast-check con mínimo 100 iteraciones
+- Los unit tests usan Vitest + React Testing Library
+- El archivo SQL del paso 21 debe ejecutarse en Supabase SQL Editor antes de usar el sistema en producción
