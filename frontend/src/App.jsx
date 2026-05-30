@@ -16,7 +16,7 @@ import Favorites from './pages/Favorites'
 import Contact from './pages/Contact'
 import PublishProperty from './pages/PublishProperty'
 import EditProperty from './pages/EditProperty'
-import AdminDashboard from './pages/AdminDashboard'
+import AdminDashboardNew from './pages/admin/AdminDashboard'
 import Messages from './pages/Messages'
 import MyProperties from './pages/MyProperties'
 import Profile from './pages/Profile'
@@ -42,7 +42,7 @@ function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<AdminDashboard />} />
+            <Route index element={<AdminDashboardNew />} />
             {/* Future admin sub-routes will be added here */}
           </Route>
 
