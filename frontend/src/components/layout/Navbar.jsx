@@ -42,22 +42,13 @@ const Navbar = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [isUserMenuOpen])
 
-  // Navbar style:
-  // - Non-home: always solid dark
-  // - Home top: 100% opaque dark (clean edge, no hero bleed)
-  // - Home scrolled: slightly transparent + blur for depth
-  const navStyle = !isHomePage
-    ? {}
-    : scrollProgress > 0
-      ? {
-          background: 'rgba(10, 15, 44, 0.8)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)'
-        }
-      : { background: 'rgba(10, 15, 44, 1)' }
+  // Navbar: always dark #0A0F2C. On scroll add blur for depth.
+  const navStyle = scrollProgress > 0 && isHomePage
+    ? { background: 'rgba(10, 15, 44, 0.92)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }
+    : { background: '#0A0F2C' }
 
   return (
-    <nav className={`navbar ${scrollProgress > 0.1 || !isHomePage ? 'navbar-scrolled' : ''}`} style={navStyle}>
+    <nav className={`navbar ${scrollProgress > 0.1 ? 'navbar-scrolled' : ''}`} style={navStyle}>
       <div className="navbar-container">
         <Link to="/" className="navbar-logo">
           <div className="logo-content">

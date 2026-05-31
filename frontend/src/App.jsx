@@ -16,7 +16,6 @@ import Favorites from './pages/user/Favorites'
 import Contact from './pages/public/Contact'
 import PublishProperty from './pages/properties/PublishProperty'
 import EditProperty from './pages/admin/EditProperty'
-import AdminDashboardNew from './pages/admin/AdminDashboard'
 import Messages from './pages/user/Messages'
 import MyProperties from './pages/user/MyProperties'
 import Profile from './pages/user/Profile'
@@ -24,6 +23,14 @@ import AccountSettings from './pages/user/AccountSettings'
 import HelpCenter from './pages/public/HelpCenter'
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminLayout from './components/admin/layout/AdminLayout'
+import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminPropiedades from './pages/admin/AdminPropiedades'
+import AdminSolicitudes from './pages/admin/AdminSolicitudes'
+import AdminUsuarios from './pages/admin/AdminUsuarios'
+import AdminContactos from './pages/admin/AdminContactos'
+import AdminNotificaciones from './pages/admin/AdminNotificaciones'
+import AdminReportes from './pages/admin/AdminReportes'
+import AdminActividad from './pages/admin/AdminActividad'
 import './styles/global/App.css'
 
 function App() {
@@ -33,19 +40,19 @@ function App() {
       <ToastProvider>
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
-          {/* Admin routes — use AdminLayout (no public Navbar/Footer) */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute adminOnly={true}>
-                <AdminLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<AdminDashboardNew />} />
+          {/* Admin routes — AdminLayout provides sidebar + topbar + Outlet */}
+          <Route path="/admin" element={<ProtectedRoute adminOnly={true}><AdminLayout /></ProtectedRoute>}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="propiedades" element={<AdminPropiedades />} />
+            <Route path="solicitudes" element={<AdminSolicitudes />} />
+            <Route path="usuarios" element={<AdminUsuarios />} />
+            <Route path="contactos" element={<AdminContactos />} />
+            <Route path="notificaciones" element={<AdminNotificaciones />} />
+            <Route path="reportes" element={<AdminReportes />} />
+            <Route path="actividad" element={<AdminActividad />} />
           </Route>
 
-          {/* Public / user routes — use public Navbar + Footer */}
+          {/* Public / user routes — Navbar + Footer */}
           <Route
             path="*"
             element={
