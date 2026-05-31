@@ -3,28 +3,28 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { PreferencesProvider } from './context/PreferencesContext'
 import { ToastProvider } from './components/ui/Toast'
-import Navbar from './components/Navbar'
-import Footer from './components/Footer'
-import Home from './pages/Home'
-import Properties from './pages/Properties'
-import Login from './pages/Login'
-import Register from './pages/Register'
-import ForgotPassword from './pages/ForgotPassword'
-import ResetPassword from './pages/ResetPassword'
-import PropertyDetail from './pages/PropertyDetail'
-import Favorites from './pages/Favorites'
-import Contact from './pages/Contact'
-import PublishProperty from './pages/PublishProperty'
-import EditProperty from './pages/EditProperty'
+import Navbar from './components/layout/Navbar'
+import Footer from './components/layout/Footer'
+import Home from './pages/public/Home'
+import Properties from './pages/properties/Properties'
+import Login from './pages/public/Login'
+import Register from './pages/public/Register'
+import ForgotPassword from './pages/public/ForgotPassword'
+import ResetPassword from './pages/public/ResetPassword'
+import PropertyDetail from './pages/properties/PropertyDetail'
+import Favorites from './pages/user/Favorites'
+import Contact from './pages/public/Contact'
+import PublishProperty from './pages/properties/PublishProperty'
+import EditProperty from './pages/admin/EditProperty'
 import AdminDashboardNew from './pages/admin/AdminDashboard'
-import Messages from './pages/Messages'
-import MyProperties from './pages/MyProperties'
-import Profile from './pages/Profile'
-import AccountSettings from './pages/AccountSettings'
-import HelpCenter from './pages/HelpCenter'
+import Messages from './pages/user/Messages'
+import MyProperties from './pages/user/MyProperties'
+import Profile from './pages/user/Profile'
+import AccountSettings from './pages/user/AccountSettings'
+import HelpCenter from './pages/public/HelpCenter'
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminLayout from './components/admin/layout/AdminLayout'
-import './App.css'
+import './styles/global/App.css'
 
 function App() {
   return (
@@ -43,7 +43,6 @@ function App() {
             }
           >
             <Route index element={<AdminDashboardNew />} />
-            {/* Future admin sub-routes will be added here */}
           </Route>
 
           {/* Public / user routes — use public Navbar + Footer */}
@@ -62,63 +61,14 @@ function App() {
                     <Route path="/restablecer-password" element={<ResetPassword />} />
                     <Route path="/propiedad/:id" element={<PropertyDetail />} />
                     <Route path="/contacto" element={<Contact />} />
-                    <Route
-                      path="/favoritos"
-                      element={
-                        <ProtectedRoute>
-                          <Favorites />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/mensajes"
-                      element={
-                        <ProtectedRoute>
-                          <Messages />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/mis-propiedades"
-                      element={
-                        <ProtectedRoute>
-                          <MyProperties />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/publicar"
-                      element={
-                        <ProtectedRoute>
-                          <PublishProperty />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/perfil"
-                      element={
-                        <ProtectedRoute>
-                          <Profile />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/configuracion"
-                      element={
-                        <ProtectedRoute>
-                          <AccountSettings />
-                        </ProtectedRoute>
-                      }
-                    />
+                    <Route path="/favoritos" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
+                    <Route path="/mensajes" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+                    <Route path="/mis-propiedades" element={<ProtectedRoute><MyProperties /></ProtectedRoute>} />
+                    <Route path="/publicar" element={<ProtectedRoute><PublishProperty /></ProtectedRoute>} />
+                    <Route path="/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                    <Route path="/configuracion" element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />
                     <Route path="/ayuda" element={<HelpCenter />} />
-                    <Route
-                      path="/editar-propiedad/:id"
-                      element={
-                        <ProtectedRoute adminOnly={true}>
-                          <EditProperty />
-                        </ProtectedRoute>
-                      }
-                    />
+                    <Route path="/editar-propiedad/:id" element={<ProtectedRoute adminOnly={true}><EditProperty /></ProtectedRoute>} />
                   </Routes>
                 </main>
                 <Footer />

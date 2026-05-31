@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext, useCallback } from 'react'
-import './Toast.css'
+import '../../styles/components/Toast.css'
 
 const ToastContext = createContext(null)
 
@@ -81,3 +81,4 @@ function ToastItem({ toast, onRemove }) {
     </div>
   )
 }
+
