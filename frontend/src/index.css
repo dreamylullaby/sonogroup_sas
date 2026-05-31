@@ -1,3 +1,9 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', sans-serif;
+}
+
 :root {
   /* Colores Principales SONOGROUP */
   --primary-color: #0A0F2C;        /* Azul Oscuro Corporativo */
