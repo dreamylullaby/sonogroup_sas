@@ -27,24 +27,24 @@ export default function KPICard({ title, value, change = 0, trend = 'neutral', i
   const chartData = sparklineData.map((v, i) => ({ idx: i, val: v }))
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-shadow duration-150">
+    <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm hover:shadow-md transition-shadow duration-200 border-l-[3px] border-l-[#E20613]/60">
       <div className="flex items-start justify-between mb-3">
-        <div className={`p-2 rounded-lg ${colors.bg}`}>
-          {IconComponent && <IconComponent className={`w-5 h-5 ${colors.icon}`} />}
+        <div className={`p-2 rounded-xl ${colors.bg}`}>
+          {IconComponent && <IconComponent className={`w-4 h-4 ${colors.icon}`} />}
         </div>
         <div className="flex items-center gap-1">
-          <TrendIcon className={`w-4 h-4 ${trendConfig.color}`} />
-          <span className={`text-xs font-medium ${trendConfig.color}`}>
+          <TrendIcon className={`w-3.5 h-3.5 ${trendConfig.color}`} />
+          <span className={`text-[10px] font-semibold ${trendConfig.color}`}>
             {change > 0 ? '+' : ''}{change}%
           </span>
         </div>
       </div>
 
       <div className="mb-2">
-        <p className="text-2xl font-semibold text-slate-900 tracking-tight">
+        <p className="text-2xl font-bold text-[#0A0F2C] tracking-tight">
           {typeof value === 'number' ? value.toLocaleString() : value}
         </p>
-        <p className="text-sm text-slate-500 mt-0.5">{title}</p>
+        <p className="text-[11px] text-slate-400 mt-0.5 font-medium">{title}</p>
       </div>
 
       {chartData.length > 1 && (

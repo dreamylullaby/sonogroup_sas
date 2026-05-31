@@ -1,143 +1,155 @@
-/**
- * AdminDashboard (nuevo) — página principal que integra todos los widgets
- * Requirements: 2.1, 2.2, 2.3, 2.8, 2.9, 2.10, 2.11
- */
-import { Building2, Users, Clock, XCircle, UserCheck, UserPlus, MessageSquare, Heart, Star, CheckCircle, AlertTriangle, RefreshCw } from 'lucide-react'
-import KPICard from '../../components/admin/dashboard/KPICard'
-import KPICardSkeleton from '../../components/admin/dashboard/KPICardSkeleton'
-import PublicationsBarChart from '../../components/admin/dashboard/PublicationsBarChart'
-import UsersLineChart from '../../components/admin/dashboard/UsersLineChart'
-import PropertyTypeDonut from '../../components/admin/dashboard/PropertyTypeDonut'
-import ActivityFeed from '../../components/admin/dashboard/ActivityFeed'
-import StatusBadge from '../../components/admin/shared/StatusBadge'
-import PageHeader from '../../components/admin/shared/PageHeader'
-import useAdminStats from '../../hooks/admin/useAdminStats'
+import { useState, useEffect } from 'react'
+import { Building2, Users, Clock, XCircle, UserCheck, UserPlus, MessageSquare, Heart, TrendingUp, TrendingDown, Plus, Shield, Monitor, BarChart3 } from 'lucide-react'
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { useAuth } from '../../context/AuthContext'
+import { useNavigate } from 'react-router-dom'
+import { api } from '../../config/api'
 
-function getTrend(change) {
-  if (change > 0) return 'up'
-  if (change < 0) return 'down'
-  return 'neutral'
+function getGreeting() {
+  const h = new Date().getHours()
+  if (h < 12) return 'Buenos días'
+  if (h < 18) return 'Buenas tardes'
+  return 'Buenas noches'
 }
 
 export default function AdminDashboard() {
-  const { kpis, changes, charts, loading, error, refetch } = useAdminStats()
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [stats, setStats] = useState(null)
+  const [charts, setCharts] = useState(null)
+  const [loading, setLoading] = useState(true)
 
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <AlertTriangle className="w-12 h-12 text-red-400 mb-4" />
-        <p className="text-slate-700 font-medium mb-2">Error al cargar el dashboard</p>
-        <p className="text-sm text-slate-500 mb-4">{error}</p>
-        <button
-          onClick={refetch}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
-        >
-          <RefreshCw className="w-4 h-4" />
-          Reintentar
-        </button>
-      </div>
-    )
-  }
+  useEffect(() => {
+    Promise.all([
+      api.get('/api/admin/stats/dashboard').catch(() => ({ data: { data: null } })),
+      api.get('/api/admin/stats/charts').catch(() => ({ data: { data: null } }))
+    ]).then(([s, c]) => {
+      setStats(s.data.data)
+      setCharts(c.data.data)
+    }).finally(() => setLoading(false))
+  }, [])
 
-  const kpiCards = kpis ? [
-    { title: 'Total Propiedades', value: kpis.totalPropiedades, change: changes?.totalPropiedades || 0, icon: Building2, color: 'blue' },
-    { title: 'Aprobadas', value: kpis.propiedadesAprobadas, change: 0, icon: CheckCircle, color: 'green' },
-    { title: 'Pendientes', value: kpis.propiedadesPendientes, change: 0, icon: Clock, color: 'yellow' },
-    { title: 'Rechazadas', value: kpis.propiedadesRechazadas, change: 0, icon: XCircle, color: 'red' },
-    { title: 'Usuarios Activos', value: kpis.usuariosActivos, change: changes?.usuariosActivos || 0, icon: UserCheck, color: 'blue' },
-    { title: 'Nuevos esta Semana', value: kpis.nuevosUsuariosSemana, change: 0, icon: UserPlus, color: 'green' },
-    { title: 'Contactos Pendientes', value: kpis.contactosSinResponder, change: changes?.contactosSinResponder || 0, icon: MessageSquare, color: 'purple' },
-    { title: 'Favoritos Totales', value: kpis.favoritosTotales, change: 0, icon: Heart, color: 'red' },
-    { title: 'Destacadas', value: kpis.propiedadesDestacadas, change: 0, icon: Star, color: 'yellow' },
-    { title: 'Publicaciones Activas', value: kpis.publicacionesActivas, change: 0, icon: Building2, color: 'green' },
-    { title: 'Publicaciones Vencidas', value: kpis.publicacionesVencidas, change: 0, icon: AlertTriangle, color: 'red' },
-  ] : []
+  const kpis = stats?.kpis || {}
+  const changes = stats?.changes || {}
+  const today = new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const firstName = user?.nombre?.split(' ')[0] || 'Admin'
+
+  const cards = [
+    { label: 'Total Propiedades', value: kpis.totalPropiedades || 0, change: changes.totalPropiedades || 0, icon: Building2, variant: 'petrol' },
+    { label: 'Aprobadas', value: kpis.propiedadesAprobadas || 0, change: 0, icon: UserCheck, variant: 'green' },
+    { label: 'Pendientes', value: kpis.propiedadesPendientes || 0, change: 0, icon: Clock, variant: 'gold' },
+    { label: 'Rechazadas', value: kpis.propiedadesRechazadas || 0, change: 0, icon: XCircle, variant: 'wine' },
+    { label: 'Usuarios Activos', value: kpis.usuariosActivos || 0, change: changes.usuariosActivos || 0, icon: Users, variant: 'petrol' },
+    { label: 'Nuevos esta Semana', value: kpis.nuevosUsuariosSemana || 0, change: 0, icon: UserPlus, variant: 'green' },
+    { label: 'Contactos Pendientes', value: kpis.contactosSinResponder || 0, change: 0, icon: MessageSquare, variant: 'gold' },
+    { label: 'Favoritos', value: kpis.favoritosTotales || 0, change: 0, icon: Heart, variant: 'wine' },
+  ]
 
   return (
     <div>
-      <PageHeader title="Dashboard" description="Resumen general del sistema" />
-
-      {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {loading
-          ? Array.from({ length: 8 }).map((_, i) => <KPICardSkeleton key={i} />)
-          : kpiCards.slice(0, 4).map((kpi, i) => (
-              <KPICard
-                key={i}
-                title={kpi.title}
-                value={kpi.value}
-                change={kpi.change}
-                trend={getTrend(kpi.change)}
-                icon={kpi.icon}
-                color={kpi.color}
-                sparklineData={[]}
-              />
-            ))
-        }
-      </div>
-
-      {!loading && kpiCards.length > 4 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {kpiCards.slice(4, 8).map((kpi, i) => (
-            <KPICard
-              key={i}
-              title={kpi.title}
-              value={kpi.value}
-              change={kpi.change}
-              trend={getTrend(kpi.change)}
-              icon={kpi.icon}
-              color={kpi.color}
-              sparklineData={[]}
-            />
-          ))}
+      {/* Welcome Banner — Identity & Context, no metrics */}
+      <div className="admin-welcome">
+        <div className="admin-welcome__left">
+          <div className="admin-welcome__avatar">
+            {firstName.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <div className="admin-welcome__greeting">{getGreeting()}, {firstName}</div>
+            <div className="admin-welcome__role">Administrador General</div>
+            <div className="admin-welcome__date">{today}</div>
+            <div className="admin-welcome__msg">Gestiona propiedades, usuarios y solicitudes desde un unico lugar.</div>
+          </div>
         </div>
-      )}
+        <div className="admin-welcome__right">
+          <div className="admin-welcome__session">
+            <div className="admin-welcome__session-item"><Clock size={12} /> <span>Sesion iniciada: {new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</span></div>
+            <div className="admin-welcome__session-item"><Shield size={12} /> <span>Permisos: Administrador General</span></div>
+            <div className="admin-welcome__session-item"><Monitor size={12} /> <span>Ultima sesion activa: Hoy</span></div>
+          </div>
+          <div className="admin-welcome__actions">
+            <button className="admin-btn admin-btn--primary admin-btn--sm" onClick={() => navigate('/publicar')}><Plus size={12} /> Nueva Propiedad</button>
+            <button className="admin-btn admin-btn--outline admin-btn--sm" onClick={() => navigate('/admin/reportes')}><BarChart3 size={12} /> Reportes</button>
+          </div>
+        </div>
+      </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      {/* KPI Cards */}
+      <div className="admin-kpi-grid">
         {loading ? (
-          <>
-            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm animate-pulse h-80" />
-            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm animate-pulse h-80" />
-          </>
+          Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="admin-kpi-card admin-kpi-card--petrol" style={{ opacity: 0.3 }}>
+              <div className="admin-kpi-card__value">-</div>
+              <div className="admin-kpi-card__label">Cargando...</div>
+            </div>
+          ))
         ) : (
-          <>
-            <PublicationsBarChart data={charts?.publicacionesPorMes || []} />
-            <UsersLineChart data={charts?.usuariosPorSemana || []} />
-          </>
+          cards.map((card, i) => {
+            const Icon = card.icon
+            return (
+              <div key={i} className={`admin-kpi-card admin-kpi-card--${card.variant}`}>
+                <div className="admin-kpi-card__icon-deco">
+                  <Icon size={28} />
+                </div>
+                <div className="admin-kpi-card__value">{card.value}</div>
+                <div className="admin-kpi-card__label">{card.label}</div>
+                {card.change !== 0 && (
+                  <div className="admin-kpi-card__trend">
+                    {card.change > 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                    {card.change > 0 ? '+' : ''}{card.change}%
+                  </div>
+                )}
+              </div>
+            )
+          })
         )}
       </div>
 
-      {/* Donut + Activity Feed */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {loading ? (
-          <>
-            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm animate-pulse h-80" />
-            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm animate-pulse h-80" />
-          </>
-        ) : (
-          <>
-            <PropertyTypeDonut data={charts?.distribucionTipos || []} />
-            <ActivityFeed activities={[]} />
-          </>
-        )}
-      </div>
+      {/* Charts */}
+      {!loading && (
+        <div className="admin-charts-row">
+          <div className="admin-chart-card">
+            <div className="admin-chart-card__title">Publicaciones por mes</div>
+            {charts?.publicacionesPorMes?.length > 0 ? (
+              <div style={{ width: '100%', height: 220 }}>
+                <ResponsiveContainer>
+                  <BarChart data={charts.publicacionesPorMes} barSize={20}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(10,15,44,0.06)" vertical={false} />
+                    <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#888' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10, fill: '#888' }} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={{ fontSize: '0.72rem', borderRadius: 8, border: 'none', boxShadow: '0 4px 16px rgba(0,0,0,0.1)' }} />
+                    <Bar dataKey="cantidad" fill="#E20613" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="admin-chart-card__empty">Sin datos en este periodo</div>
+            )}
+          </div>
 
-      {/* Remaining KPIs (3 more) */}
-      {!loading && kpiCards.length > 8 && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          {kpiCards.slice(8).map((kpi, i) => (
-            <KPICard
-              key={i}
-              title={kpi.title}
-              value={kpi.value}
-              change={kpi.change}
-              trend={getTrend(kpi.change)}
-              icon={kpi.icon}
-              color={kpi.color}
-              sparklineData={[]}
-            />
-          ))}
+          <div className="admin-chart-card">
+            <div className="admin-chart-card__title">Crecimiento de usuarios</div>
+            {charts?.usuariosPorSemana?.length > 0 ? (
+              <div style={{ width: '100%', height: 220 }}>
+                <ResponsiveContainer>
+                  <AreaChart data={charts.usuariosPorSemana}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(10,15,44,0.06)" vertical={false} />
+                    <XAxis dataKey="semana" tick={{ fontSize: 10, fill: '#888' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10, fill: '#888' }} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={{ fontSize: '0.72rem', borderRadius: 8, border: 'none', boxShadow: '0 4px 16px rgba(0,0,0,0.1)' }} />
+                    <defs>
+                      <linearGradient id="gradUsers" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#1A3A5C" stopOpacity={0.15} />
+                        <stop offset="95%" stopColor="#1A3A5C" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <Area type="monotone" dataKey="cantidad" stroke="#1A3A5C" strokeWidth={2.5} fill="url(#gradUsers)" dot={{ r: 4, fill: '#1A3A5C', strokeWidth: 0 }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="admin-chart-card__empty">Sin datos en este periodo</div>
+            )}
+          </div>
         </div>
       )}
     </div>
