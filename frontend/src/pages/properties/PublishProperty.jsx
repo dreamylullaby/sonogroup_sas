@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import { api, parseApiError, ENUMS, ENUM_LABELS } from '../config/api'
-import { buildInmueblePayload } from '../utils/payloadMappers'
-import { validators } from '../utils/validation'
+import { useAuth } from '../../context/AuthContext'
+import { api, parseApiError, ENUMS, ENUM_LABELS } from '../../config/api'
+import { buildInmueblePayload } from '../../utils/payloadMappers'
+import { validators } from '../../utils/validation'
 import '../../styles/pages/PublishProperty.css'
 
 const PublishProperty = ({ editMode = false, propertyId = null }) => {
@@ -622,4 +622,5 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
 }
 
 export default PublishProperty
+
 
