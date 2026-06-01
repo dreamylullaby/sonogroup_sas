@@ -117,7 +117,7 @@ export default function AdminDashboard() {
                     <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#888' }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 10, fill: '#888' }} axisLine={false} tickLine={false} />
                     <Tooltip contentStyle={{ fontSize: '0.72rem', borderRadius: 8, border: 'none', boxShadow: '0 4px 16px rgba(0,0,0,0.1)' }} />
-                    <Bar dataKey="cantidad" fill="#E20613" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="cantidad" fill="#CC1E2B" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -138,11 +138,11 @@ export default function AdminDashboard() {
                     <Tooltip contentStyle={{ fontSize: '0.72rem', borderRadius: 8, border: 'none', boxShadow: '0 4px 16px rgba(0,0,0,0.1)' }} />
                     <defs>
                       <linearGradient id="gradUsers" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#1A3A5C" stopOpacity={0.15} />
-                        <stop offset="95%" stopColor="#1A3A5C" stopOpacity={0} />
+                        <stop offset="5%" stopColor="#7692FF" stopOpacity={0.2} />
+                        <stop offset="95%" stopColor="#7692FF" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <Area type="monotone" dataKey="cantidad" stroke="#1A3A5C" strokeWidth={2.5} fill="url(#gradUsers)" dot={{ r: 4, fill: '#1A3A5C', strokeWidth: 0 }} />
+                    <Area type="monotone" dataKey="cantidad" stroke="#1B2CC1" strokeWidth={2.5} fill="url(#gradUsers)" dot={{ r: 4, fill: '#1B2CC1', strokeWidth: 0 }} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>

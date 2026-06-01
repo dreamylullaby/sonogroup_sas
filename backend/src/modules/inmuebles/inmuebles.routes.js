@@ -422,6 +422,14 @@ router.post('/', verificarToken, async (req, res) => {
 
         console.log('✅ Solicitud creada:', solicitud.id_solicitud);
 
+        // Notificar a admins de nueva solicitud
+        const { data: admins } = await supabase.from('usuarios').select('id_usuario').eq('rol', 'admin');
+        if (admins && admins.length > 0) {
+            await supabase.from('notificaciones').insert(
+                admins.map(a => ({ id_usuario: a.id_usuario, tipo: 'sistema', titulo: 'Nueva solicitud de publicacion', mensaje: `Un usuario ha enviado una nueva solicitud de ${datos.tipo_inmueble || 'propiedad'} para revision.` }))
+            );
+        }
+
         res.status(201).json({
             mensaje: 'Propiedad enviada para revisión del administrador',
             solicitud

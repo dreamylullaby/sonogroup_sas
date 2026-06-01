@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Bell, Settings, LogOut, User, ArrowLeft } from 'lucide-react'
+import { Bell, Settings, LogOut, User, ArrowLeft } from 'lucide-react'
 import { useAuth } from '../../../context/AuthContext'
 import { api } from '../../../config/api'
 
@@ -27,10 +27,7 @@ export default function AdminNavbar() {
 
   return (
     <header className="admin-topbar">
-      <div className="admin-topbar__search">
-        <Search size={14} />
-        <input type="text" placeholder="Buscar en el panel..." />
-      </div>
+      <div style={{ flex: 1 }}></div>
 
       <div className="admin-topbar__right">
         <button className="admin-topbar__icon-btn" onClick={() => navigate('/admin/notificaciones')}>

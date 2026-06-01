@@ -51,9 +51,10 @@ const Navbar = () => {
     <nav className={`navbar ${scrollProgress > 0.1 ? 'navbar-scrolled' : ''}`} style={navStyle}>
       <div className="navbar-container">
         <Link to="/" className="navbar-logo">
+          <img src="/src/assets/images/logo_sonogroup_blanco.png" alt="Sonogroup" className="navbar-logo-img" />
           <div className="logo-content">
             <span className="logo-text">SONOGROUP</span>
-            <span className="logo-subtitle">Real Estate</span>
+            <span className="logo-subtitle">S.A.S</span>
           </div>
         </Link>
 
