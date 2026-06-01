@@ -751,17 +751,42 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
           {currentStep === 4 && (
             <div className="form-section step-content">
               <h3>Características de {ENUM_LABELS.tipo_inmueble[formDataComun.tipo_inmueble]}</h3>
+              <p className="text-sm text-slate-400 italic mb-4">Los campos con * son obligatorios</p>
+              <StepErrorBanner errorCount={stepErrorCount} />
               <div className="characteristics-grid">
                 {/* Campos numéricos */}
                 <div className="char-group">
                   <h4>Dimensiones y Espacios</h4>
                   {camposActuales.filter(c => c.type === 'number').map(campo => (
-                    <div key={campo.name} className="form-group compact">
-                      <label htmlFor={campo.name}>{campo.label} {campo.required && '*'}</label>
-                      <input type="number" id={campo.name} name={campo.name}
-                        value={caracteristicasEspecificas[campo.name] ?? ''}
-                        onChange={handleEspecificasChange} disabled={loading} step={campo.step || '1'} />
-                    </div>
+                    campo.required ? (
+                      <FieldWrapper
+                        key={campo.name}
+                        label={campo.label}
+                        name={campo.name}
+                        required
+                        error={getFieldState(campo.name).error}
+                        touched={getFieldState(campo.name).touched}
+                      >
+                        <input
+                          type="number"
+                          id={campo.name}
+                          name={campo.name}
+                          value={caracteristicasEspecificas[campo.name] ?? ''}
+                          onChange={handleEspecificasChange}
+                          onBlur={() => validationHandleBlur(campo.name)}
+                          disabled={loading}
+                          step={campo.step || '1'}
+                          className={getInputClassName(getFieldState(campo.name).touched, getFieldState(campo.name).error)}
+                        />
+                      </FieldWrapper>
+                    ) : (
+                      <div key={campo.name} className="form-group compact">
+                        <label htmlFor={campo.name}>{campo.label}</label>
+                        <input type="number" id={campo.name} name={campo.name}
+                          value={caracteristicasEspecificas[campo.name] ?? ''}
+                          onChange={handleEspecificasChange} disabled={loading} step={campo.step || '1'} />
+                      </div>
+                    )
                   ))}
                 </div>
 
