@@ -7,6 +7,7 @@ import { validators } from '../../utils/validation'
 import FieldWrapper, { getInputClassName } from '../../components/ui/FieldWrapper'
 import StepErrorBanner from '../../components/ui/StepErrorBanner'
 import { useFormValidation } from '../../hooks/useFormValidation'
+import { useCurrencyFormat } from '../../hooks/useCurrencyFormat'
 import '../../styles/pages/PublishProperty.css'
 
 const PublishProperty = ({ editMode = false, propertyId = null }) => {
@@ -185,6 +186,17 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
     hasAttemptedSubmit,
     setHasAttemptedSubmit
   } = useFormValidation(getFormValues, camposPorTipo, formDataComun.tipo_inmueble)
+
+  // Currency formatting for price fields
+  const handleValorChange = useCallback((raw) => {
+    setFormDataComun(prev => ({ ...prev, valor: raw }))
+  }, [])
+  const handleValorAdminChange = useCallback((raw) => {
+    setFormDataComun(prev => ({ ...prev, valor_administracion: raw }))
+  }, [])
+
+  const currencyValor = useCurrencyFormat(formDataComun.valor, handleValorChange)
+  const currencyValorAdmin = useCurrencyFormat(formDataComun.valor_administracion, handleValorAdminChange)
 
   // Cargar datos si estamos en modo edición
   useEffect(() => {
@@ -463,64 +475,167 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
           {currentStep === 2 && (
             <div className="form-section step-content">
               <h3>Detalles Básicos</h3>
-              <div className="form-group">
-                <label htmlFor="valor">Precio (COP) *</label>
-                <input type="number" id="valor" name="valor" placeholder="Ej: 250000000"
-                  value={formDataComun.valor} onChange={handleCommonChange} disabled={loading}
-                  required min="1" step="0.01" />
-              </div>
+              <p className="text-sm text-slate-400 italic mb-4">Los campos con * son obligatorios</p>
+              <StepErrorBanner errorCount={stepErrorCount} />
+              <FieldWrapper
+                label="Precio (COP)"
+                name="valor"
+                required
+                error={getFieldState('valor').error}
+                touched={getFieldState('valor').touched}
+              >
+                <input
+                  type="text"
+                  id="valor"
+                  name="valor"
+                  placeholder="Ej: 250000000"
+                  value={currencyValor.displayValue}
+                  onChange={currencyValor.handleChange}
+                  onFocus={currencyValor.handleFocus}
+                  onBlur={() => { currencyValor.handleBlur(); validationHandleBlur('valor') }}
+                  disabled={loading}
+                  className={getInputClassName(getFieldState('valor').touched, getFieldState('valor').error)}
+                />
+              </FieldWrapper>
               <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="valor_administracion">Valor Administración (COP)</label>
-                  <input type="number" id="valor_administracion" name="valor_administracion" placeholder="Ej: 350000"
-                    value={formDataComun.valor_administracion} onChange={handleCommonChange} disabled={loading}
-                    min="0" step="0.01" />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="estrato">Estrato</label>
-                  <select id="estrato" name="estrato" value={formDataComun.estrato}
-                    onChange={handleCommonChange} disabled={loading}>
+                <FieldWrapper
+                  label="Valor Administración (COP)"
+                  name="valor_administracion"
+                  error={getFieldState('valor_administracion').error}
+                  touched={getFieldState('valor_administracion').touched}
+                >
+                  <input
+                    type="text"
+                    id="valor_administracion"
+                    name="valor_administracion"
+                    placeholder="Ej: 350000"
+                    value={currencyValorAdmin.displayValue}
+                    onChange={currencyValorAdmin.handleChange}
+                    onFocus={currencyValorAdmin.handleFocus}
+                    onBlur={() => { currencyValorAdmin.handleBlur(); validationHandleBlur('valor_administracion') }}
+                    disabled={loading}
+                    className={getInputClassName(getFieldState('valor_administracion').touched, getFieldState('valor_administracion').error)}
+                  />
+                </FieldWrapper>
+                <FieldWrapper
+                  label="Estrato"
+                  name="estrato"
+                  error={getFieldState('estrato').error}
+                  touched={getFieldState('estrato').touched}
+                >
+                  <select
+                    id="estrato"
+                    name="estrato"
+                    value={formDataComun.estrato}
+                    onChange={handleCommonChange}
+                    onBlur={() => validationHandleBlur('estrato')}
+                    disabled={loading}
+                    className={getInputClassName(getFieldState('estrato').touched, getFieldState('estrato').error)}
+                  >
                     <option value="">No aplica</option>
                     {[1, 2, 3, 4, 5, 6].map(e => <option key={e} value={e}>{e}</option>)}
                   </select>
-                </div>
+                </FieldWrapper>
               </div>
-              <div className="form-group">
-                <label htmlFor="descripcion">Titulo de la publcación</label>
-                <textarea id="descripcion" name="descripcion" placeholder="Escribe el titulo para la publicación de la propiedad (mínimo 10 caracteres)"
-                  value={formDataComun.descripcion} onChange={handleCommonChange} disabled={loading} rows="4" />
-              </div>
+              <FieldWrapper
+                label="Título de la publicación"
+                name="descripcion"
+                error={getFieldState('descripcion').error}
+                touched={getFieldState('descripcion').touched}
+              >
+                <textarea
+                  id="descripcion"
+                  name="descripcion"
+                  placeholder="Escribe el titulo para la publicación de la propiedad (mínimo 10 caracteres)"
+                  value={formDataComun.descripcion}
+                  onChange={handleCommonChange}
+                  onBlur={() => validationHandleBlur('descripcion')}
+                  disabled={loading}
+                  rows="4"
+                  className={getInputClassName(getFieldState('descripcion').touched, getFieldState('descripcion').error)}
+                />
+              </FieldWrapper>
               <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="estado_inmueble">Estado</label>
-                  <select id="estado_inmueble" name="estado_inmueble" value={formDataComun.estado_inmueble}
-                    onChange={handleCommonChange} disabled={loading}>
+                <FieldWrapper
+                  label="Estado"
+                  name="estado_inmueble"
+                  required
+                  error={getFieldState('estado_inmueble').error}
+                  touched={getFieldState('estado_inmueble').touched}
+                >
+                  <select
+                    id="estado_inmueble"
+                    name="estado_inmueble"
+                    value={formDataComun.estado_inmueble}
+                    onChange={handleCommonChange}
+                    onBlur={() => validationHandleBlur('estado_inmueble')}
+                    disabled={loading}
+                    className={getInputClassName(getFieldState('estado_inmueble').touched, getFieldState('estado_inmueble').error)}
+                  >
                     {ENUMS.estado_inmueble.map(e => (
                       <option key={e} value={e}>{ENUM_LABELS.estado_inmueble[e]}</option>
                     ))}
                   </select>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="zona">Zona</label>
-                  <select id="zona" name="zona" value={formDataComun.zona}
-                    onChange={handleCommonChange} disabled={loading}>
+                </FieldWrapper>
+                <FieldWrapper
+                  label="Zona"
+                  name="zona"
+                  required
+                  error={getFieldState('zona').error}
+                  touched={getFieldState('zona').touched}
+                >
+                  <select
+                    id="zona"
+                    name="zona"
+                    value={formDataComun.zona}
+                    onChange={handleCommonChange}
+                    onBlur={() => validationHandleBlur('zona')}
+                    disabled={loading}
+                    className={getInputClassName(getFieldState('zona').touched, getFieldState('zona').error)}
+                  >
                     {ENUMS.zona_tipo.map(z => (
                       <option key={z} value={z}>{ENUM_LABELS.zona_tipo[z]}</option>
                     ))}
                   </select>
-                </div>
+                </FieldWrapper>
               </div>
               <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="numero_matricula">Número Matrícula</label>
-                  <input type="text" id="numero_matricula" name="numero_matricula" placeholder="Matrícula ORIP"
-                    value={formDataComun.numero_matricula} onChange={handleCommonChange} disabled={loading} />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="codigo_catastral">Código Catastral</label>
-                  <input type="text" id="codigo_catastral" name="codigo_catastral" placeholder="Ficha predial IGAC"
-                    value={formDataComun.codigo_catastral} onChange={handleCommonChange} disabled={loading} />
-                </div>
+                <FieldWrapper
+                  label="Número Matrícula"
+                  name="numero_matricula"
+                  error={getFieldState('numero_matricula').error}
+                  touched={getFieldState('numero_matricula').touched}
+                >
+                  <input
+                    type="text"
+                    id="numero_matricula"
+                    name="numero_matricula"
+                    placeholder="Matrícula ORIP"
+                    value={formDataComun.numero_matricula}
+                    onChange={handleCommonChange}
+                    onBlur={() => validationHandleBlur('numero_matricula')}
+                    disabled={loading}
+                    className={getInputClassName(getFieldState('numero_matricula').touched, getFieldState('numero_matricula').error)}
+                  />
+                </FieldWrapper>
+                <FieldWrapper
+                  label="Código Catastral"
+                  name="codigo_catastral"
+                  error={getFieldState('codigo_catastral').error}
+                  touched={getFieldState('codigo_catastral').touched}
+                >
+                  <input
+                    type="text"
+                    id="codigo_catastral"
+                    name="codigo_catastral"
+                    placeholder="Ficha predial IGAC"
+                    value={formDataComun.codigo_catastral}
+                    onChange={handleCommonChange}
+                    onBlur={() => validationHandleBlur('codigo_catastral')}
+                    disabled={loading}
+                    className={getInputClassName(getFieldState('codigo_catastral').touched, getFieldState('codigo_catastral').error)}
+                  />
+                </FieldWrapper>
               </div>
               <div className="form-group">
                 <label className="feature-checkbox">
