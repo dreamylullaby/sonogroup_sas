@@ -651,29 +651,87 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
           {currentStep === 3 && (
             <div className="form-section step-content">
               <h3>Ubicación</h3>
+              <p className="text-sm text-slate-400 italic mb-4">Los campos con * son obligatorios</p>
+              <StepErrorBanner errorCount={stepErrorCount} />
               <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="municipio">Municipio/Ciudad *</label>
-                  <input type="text" id="municipio" name="municipio" placeholder="Ej: Medellín"
-                    value={ubicacion.municipio} onChange={handleUbicacionChange} disabled={loading} required />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="departamento">Departamento</label>
-                  <input type="text" id="departamento" name="departamento" placeholder="Ej: Antioquia"
-                    value={ubicacion.departamento} onChange={handleUbicacionChange} disabled={loading} />
-                </div>
+                <FieldWrapper
+                  label="Municipio/Ciudad"
+                  name="municipio"
+                  required
+                  error={getFieldState('municipio').error}
+                  touched={getFieldState('municipio').touched}
+                >
+                  <input
+                    type="text"
+                    id="municipio"
+                    name="municipio"
+                    placeholder="Ej: Medellín"
+                    value={ubicacion.municipio}
+                    onChange={handleUbicacionChange}
+                    onBlur={() => validationHandleBlur('municipio')}
+                    disabled={loading}
+                    required
+                    className={getInputClassName(getFieldState('municipio').touched, getFieldState('municipio').error)}
+                  />
+                </FieldWrapper>
+                <FieldWrapper
+                  label="Departamento"
+                  name="departamento"
+                  required
+                  error={getFieldState('departamento').error}
+                  touched={getFieldState('departamento').touched}
+                >
+                  <input
+                    type="text"
+                    id="departamento"
+                    name="departamento"
+                    placeholder="Ej: Antioquia"
+                    value={ubicacion.departamento}
+                    onChange={handleUbicacionChange}
+                    onBlur={() => validationHandleBlur('departamento')}
+                    disabled={loading}
+                    required
+                    className={getInputClassName(getFieldState('departamento').touched, getFieldState('departamento').error)}
+                  />
+                </FieldWrapper>
               </div>
               <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="barrio_vereda">Barrio/Vereda</label>
-                  <input type="text" id="barrio_vereda" name="barrio_vereda" placeholder="Ej: El Poblado"
-                    value={ubicacion.barrio_vereda} onChange={handleUbicacionChange} disabled={loading} />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="direccion">Dirección</label>
-                  <input type="text" id="direccion" name="direccion" placeholder="Ej: Calle 123 #45-67"
-                    value={ubicacion.direccion} onChange={handleUbicacionChange} disabled={loading} />
-                </div>
+                <FieldWrapper
+                  label="Barrio/Vereda"
+                  name="barrio_vereda"
+                  error={getFieldState('barrio_vereda').error}
+                  touched={getFieldState('barrio_vereda').touched}
+                >
+                  <input
+                    type="text"
+                    id="barrio_vereda"
+                    name="barrio_vereda"
+                    placeholder="Ej: El Poblado"
+                    value={ubicacion.barrio_vereda}
+                    onChange={handleUbicacionChange}
+                    onBlur={() => validationHandleBlur('barrio_vereda')}
+                    disabled={loading}
+                    className={getInputClassName(getFieldState('barrio_vereda').touched, getFieldState('barrio_vereda').error)}
+                  />
+                </FieldWrapper>
+                <FieldWrapper
+                  label="Dirección"
+                  name="direccion"
+                  error={getFieldState('direccion').error}
+                  touched={getFieldState('direccion').touched}
+                >
+                  <input
+                    type="text"
+                    id="direccion"
+                    name="direccion"
+                    placeholder="Ej: Calle 123 #45-67"
+                    value={ubicacion.direccion}
+                    onChange={handleUbicacionChange}
+                    onBlur={() => validationHandleBlur('direccion')}
+                    disabled={loading}
+                    className={getInputClassName(getFieldState('direccion').touched, getFieldState('direccion').error)}
+                  />
+                </FieldWrapper>
               </div>
 
               <h4 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Servicios Públicos</h4>
