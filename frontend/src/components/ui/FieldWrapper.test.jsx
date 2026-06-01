@@ -12,8 +12,8 @@ import { getInputClassName } from './FieldWrapper'
 describe('FieldWrapper - Property 1: Conditional input styling is mutually exclusive', () => {
   const ERROR_CLASSES = ['border-red-400', 'bg-red-50/60', 'focus:ring-red-200', 'focus:border-red-400']
   const VALID_CLASSES = ['border-emerald-400', 'bg-emerald-50/30', 'focus:ring-emerald-200', 'focus:border-emerald-400']
-  const DEFAULT_CLASSES = ['border-slate-200', 'bg-white', 'focus:ring-indigo-200', 'focus:border-indigo-400']
-  const BASE_CLASSES = ['transition-all', 'duration-200', 'rounded-lg', 'px-4', 'py-2.5', 'text-sm', 'w-full']
+  const DEFAULT_CLASSES = ['border-slate-200', 'focus:ring-indigo-200', 'focus:border-indigo-400']
+  const BASE_CLASSES = ['transition-all', 'duration-200', 'rounded-lg', 'px-4', 'py-3', 'text-base', 'w-full', 'bg-white']
 
   const errorArb = fc.oneof(
     fc.constant(null),

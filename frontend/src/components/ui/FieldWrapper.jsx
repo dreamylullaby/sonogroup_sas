@@ -9,17 +9,17 @@
  */
 export function getInputClassName(touched, error) {
   const base =
-    'transition-all duration-200 rounded-lg px-4 py-2.5 text-sm w-full'
+    'transition-all duration-200 rounded-lg border px-4 py-3 text-base w-full bg-white text-slate-800 placeholder:text-slate-400 placeholder:text-sm'
 
   if (!touched) {
-    return `${base} border-slate-200 bg-white focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400`
+    return `${base} border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400`
   }
 
   if (error) {
-    return `${base} border-red-400 bg-red-50/60 focus:ring-2 focus:ring-red-200 focus:border-red-400`
+    return `${base} border-red-400 bg-red-50/60 focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400`
   }
 
-  return `${base} border-emerald-400 bg-emerald-50/30 focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400`
+  return `${base} border-emerald-400 bg-emerald-50/30 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400`
 }
 
 /**
@@ -31,16 +31,16 @@ const FieldWrapper = ({ label, name, required, error, touched, children }) => {
   const showValid = touched && !error
 
   return (
-    <div className="mb-4">
+    <div className="mb-6">
       {label && (
         <label
           htmlFor={name}
-          className="block uppercase text-xs font-medium text-slate-500 tracking-wide mb-1"
+          className="block text-sm font-medium text-slate-600 mb-2"
         >
           {label}
           {required && <span className="text-red-500 ml-0.5">*</span>}
           {showValid && (
-            <span className="text-emerald-500 ml-2 normal-case text-xs">
+            <span className="text-emerald-500 ml-2 text-sm font-normal">
               ✓ Correcto
             </span>
           )}
@@ -50,7 +50,7 @@ const FieldWrapper = ({ label, name, required, error, touched, children }) => {
       {children}
 
       {showError && (
-        <p className="text-red-500 text-xs mt-1">{error}</p>
+        <p className="text-red-500 text-sm mt-1.5">{error}</p>
       )}
     </div>
   )

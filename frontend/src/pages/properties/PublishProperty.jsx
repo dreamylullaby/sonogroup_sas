@@ -753,7 +753,7 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
                 </FieldWrapper>
               </div>
 
-              <h4 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Servicios Públicos</h4>
+              <h4 className="text-sm font-semibold text-slate-700 mt-8 mb-4">Servicios Públicos</h4>
               <div className="features-grid">
                 {Object.keys(servicios).map(servicio => (
                   <label key={servicio} className="feature-checkbox">
