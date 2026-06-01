@@ -43,14 +43,6 @@ const validationConfig = {
     estrato: {
       required: true,
       message: 'Selecciona una opción'
-    },
-    numero_matricula: {
-      required: true,
-      message: 'Este campo es obligatorio'
-    },
-    codigo_catastral: {
-      required: true,
-      message: 'Este campo es obligatorio'
     }
   },
   step3: {

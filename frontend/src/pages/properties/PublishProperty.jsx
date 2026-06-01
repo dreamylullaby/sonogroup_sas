@@ -248,6 +248,13 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
     if (!editMode) setCaracteristicasEspecificas({})
   }, [formDataComun.tipo_inmueble, editMode])
 
+  // Resetear acepta_permuta cuando tipo_operacion cambia a arriendo
+  useEffect(() => {
+    if (formDataComun.tipo_operacion === 'arriendo') {
+      setFormDataComun(prev => ({ ...prev, acepta_permuta: false }))
+    }
+  }, [formDataComun.tipo_operacion])
+
   const handleCommonChange = (e) => {
     const { name, value, type, checked } = e.target
     setFormDataComun(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
@@ -614,53 +621,70 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
                   </select>
                 </FieldWrapper>
               </div>
-              <div className="form-row">
-                <FieldWrapper
-                  label="Número Matrícula"
-                  name="numero_matricula"
-                  required
-                  error={getFieldState('numero_matricula').error}
-                  touched={getFieldState('numero_matricula').touched}
-                >
-                  <input
-                    type="text"
-                    id="numero_matricula"
+              <div className="registral-section">
+                <div className="registral-section__header">
+                  <h4>Datos registrales del inmueble</h4>
+                  <span className="registral-section__help">
+                    Opcional. Recomendado para venta, no indispensable para arriendo.
+                  </span>
+                </div>
+                <div className="form-row">
+                  <FieldWrapper
+                    label="Número de matrícula inmobiliaria"
                     name="numero_matricula"
-                    placeholder="Matrícula ORIP"
-                    value={formDataComun.numero_matricula}
-                    onChange={handleCommonChange}
-                    onBlur={() => validationHandleBlur('numero_matricula')}
-                    disabled={loading}
-                    className={getInputClassName(getFieldState('numero_matricula').touched, getFieldState('numero_matricula').error)}
-                  />
-                </FieldWrapper>
-                <FieldWrapper
-                  label="Código Catastral"
-                  name="codigo_catastral"
-                  required
-                  error={getFieldState('codigo_catastral').error}
-                  touched={getFieldState('codigo_catastral').touched}
-                >
-                  <input
-                    type="text"
-                    id="codigo_catastral"
+                    error={getFieldState('numero_matricula').error}
+                    touched={getFieldState('numero_matricula').touched}
+                  >
+                    <input
+                      type="text"
+                      id="numero_matricula"
+                      name="numero_matricula"
+                      placeholder="Ej: 050-123456"
+                      value={formDataComun.numero_matricula}
+                      onChange={handleCommonChange}
+                      onBlur={() => validationHandleBlur('numero_matricula')}
+                      disabled={loading}
+                      className={getInputClassName(getFieldState('numero_matricula').touched, getFieldState('numero_matricula').error)}
+                    />
+                  </FieldWrapper>
+                  <FieldWrapper
+                    label="Código catastral"
                     name="codigo_catastral"
-                    placeholder="Ficha predial IGAC"
-                    value={formDataComun.codigo_catastral}
-                    onChange={handleCommonChange}
-                    onBlur={() => validationHandleBlur('codigo_catastral')}
-                    disabled={loading}
-                    className={getInputClassName(getFieldState('codigo_catastral').touched, getFieldState('codigo_catastral').error)}
-                  />
-                </FieldWrapper>
+                    error={getFieldState('codigo_catastral').error}
+                    touched={getFieldState('codigo_catastral').touched}
+                  >
+                    <input
+                      type="text"
+                      id="codigo_catastral"
+                      name="codigo_catastral"
+                      placeholder="Ej: 01-02-0003-0045-000"
+                      value={formDataComun.codigo_catastral}
+                      onChange={handleCommonChange}
+                      onBlur={() => validationHandleBlur('codigo_catastral')}
+                      disabled={loading}
+                      className={getInputClassName(getFieldState('codigo_catastral').touched, getFieldState('codigo_catastral').error)}
+                    />
+                  </FieldWrapper>
+                </div>
               </div>
-              <div className="form-group">
-                <label className="feature-checkbox">
-                  <input type="checkbox" name="acepta_permuta" checked={!!formDataComun.acepta_permuta}
-                    onChange={handleCommonChange} disabled={loading} />
-                  <span>Acepta Permuta</span>
-                </label>
-              </div>
+
+              {formDataComun.tipo_operacion !== 'arriendo' && (
+                <div className="permuta-section">
+                  <label className="feature-checkbox permuta-checkbox">
+                    <input
+                      type="checkbox"
+                      name="acepta_permuta"
+                      checked={!!formDataComun.acepta_permuta}
+                      onChange={handleCommonChange}
+                      disabled={loading}
+                    />
+                    <div className="permuta-label-group">
+                      <span>¿Acepta permuta?</span>
+                      <small>Indica si considerarías un intercambio parcial o total del inmueble.</small>
+                    </div>
+                  </label>
+                </div>
+              )}
             </div>
           )}
 
