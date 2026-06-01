@@ -425,8 +425,8 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
                 </div>
               </div>
               <div className="form-group">
-                <label htmlFor="descripcion">Descripción</label>
-                <textarea id="descripcion" name="descripcion" placeholder="Describe la propiedad (mínimo 10 caracteres si se llena)..."
+                <label htmlFor="descripcion">Titulo de la publcación</label>
+                <textarea id="descripcion" name="descripcion" placeholder="Escribe el titulo para la publicación de la propiedad (mínimo 10 caracteres)"
                   value={formDataComun.descripcion} onChange={handleCommonChange} disabled={loading} rows="4" />
               </div>
               <div className="form-row">
