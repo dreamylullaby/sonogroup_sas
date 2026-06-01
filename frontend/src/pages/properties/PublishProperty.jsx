@@ -265,10 +265,22 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
 
   const handleEspecificasChange = (e) => {
     const { name, value, type, checked } = e.target
-    setCaracteristicasEspecificas(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : (type === 'number' ? (value === '' ? '' : parseFloat(value)) : value)
-    }))
+    if (type === 'checkbox') {
+      setCaracteristicasEspecificas(prev => ({ ...prev, [name]: checked }))
+    } else if (type === 'number') {
+      if (value === '' || Number(value) >= 0) {
+        setCaracteristicasEspecificas(prev => ({ ...prev, [name]: value === '' ? '' : parseFloat(value) }))
+      }
+    } else {
+      setCaracteristicasEspecificas(prev => ({ ...prev, [name]: value }))
+    }
+  }
+
+  /** Block minus sign, 'e', 'E', '+' on numeric inputs */
+  const handleNumericKeyDown = (e) => {
+    if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
+      e.preventDefault()
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -501,6 +513,7 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
                 <FieldWrapper
                   label="Valor Administración (COP)"
                   name="valor_administracion"
+                  required
                   error={getFieldState('valor_administracion').error}
                   touched={getFieldState('valor_administracion').touched}
                 >
@@ -520,6 +533,7 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
                 <FieldWrapper
                   label="Estrato"
                   name="estrato"
+                  required
                   error={getFieldState('estrato').error}
                   touched={getFieldState('estrato').touched}
                 >
@@ -540,6 +554,7 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
               <FieldWrapper
                 label="Título de la publicación"
                 name="descripcion"
+                required
                 error={getFieldState('descripcion').error}
                 touched={getFieldState('descripcion').touched}
               >
@@ -603,6 +618,7 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
                 <FieldWrapper
                   label="Número Matrícula"
                   name="numero_matricula"
+                  required
                   error={getFieldState('numero_matricula').error}
                   touched={getFieldState('numero_matricula').touched}
                 >
@@ -621,6 +637,7 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
                 <FieldWrapper
                   label="Código Catastral"
                   name="codigo_catastral"
+                  required
                   error={getFieldState('codigo_catastral').error}
                   touched={getFieldState('codigo_catastral').touched}
                 >
@@ -699,6 +716,7 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
                 <FieldWrapper
                   label="Barrio/Vereda"
                   name="barrio_vereda"
+                  required
                   error={getFieldState('barrio_vereda').error}
                   touched={getFieldState('barrio_vereda').touched}
                 >
@@ -717,6 +735,7 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
                 <FieldWrapper
                   label="Dirección"
                   name="direccion"
+                  required
                   error={getFieldState('direccion').error}
                   touched={getFieldState('direccion').touched}
                 >
@@ -758,35 +777,28 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
                 <div className="char-group">
                   <h4>Dimensiones y Espacios</h4>
                   {camposActuales.filter(c => c.type === 'number').map(campo => (
-                    campo.required ? (
-                      <FieldWrapper
-                        key={campo.name}
-                        label={campo.label}
+                    <FieldWrapper
+                      key={campo.name}
+                      label={campo.label}
+                      name={campo.name}
+                      required
+                      error={getFieldState(campo.name).error}
+                      touched={getFieldState(campo.name).touched}
+                    >
+                      <input
+                        type="number"
+                        id={campo.name}
                         name={campo.name}
-                        required
-                        error={getFieldState(campo.name).error}
-                        touched={getFieldState(campo.name).touched}
-                      >
-                        <input
-                          type="number"
-                          id={campo.name}
-                          name={campo.name}
-                          value={caracteristicasEspecificas[campo.name] ?? ''}
-                          onChange={handleEspecificasChange}
-                          onBlur={() => validationHandleBlur(campo.name)}
-                          disabled={loading}
-                          step={campo.step || '1'}
-                          className={getInputClassName(getFieldState(campo.name).touched, getFieldState(campo.name).error)}
-                        />
-                      </FieldWrapper>
-                    ) : (
-                      <div key={campo.name} className="form-group compact">
-                        <label htmlFor={campo.name}>{campo.label}</label>
-                        <input type="number" id={campo.name} name={campo.name}
-                          value={caracteristicasEspecificas[campo.name] ?? ''}
-                          onChange={handleEspecificasChange} disabled={loading} step={campo.step || '1'} />
-                      </div>
-                    )
+                        min="0"
+                        step={campo.step || '1'}
+                        value={caracteristicasEspecificas[campo.name] ?? ''}
+                        onChange={handleEspecificasChange}
+                        onBlur={() => validationHandleBlur(campo.name)}
+                        onKeyDown={handleNumericKeyDown}
+                        disabled={loading}
+                        className={getInputClassName(getFieldState(campo.name).touched, getFieldState(campo.name).error)}
+                      />
+                    </FieldWrapper>
                   ))}
                 </div>
 
@@ -795,15 +807,27 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
                   <div className="char-group">
                     <h4>Características Adicionales</h4>
                     {camposActuales.filter(c => c.type === 'select').map(campo => (
-                      <div key={campo.name} className="form-group compact">
-                        <label htmlFor={campo.name}>{campo.label}</label>
-                        <select id={campo.name} name={campo.name}
+                      <FieldWrapper
+                        key={campo.name}
+                        label={campo.label}
+                        name={campo.name}
+                        required
+                        error={getFieldState(campo.name).error}
+                        touched={getFieldState(campo.name).touched}
+                      >
+                        <select
+                          id={campo.name}
+                          name={campo.name}
                           value={caracteristicasEspecificas[campo.name] || ''}
-                          onChange={handleEspecificasChange} disabled={loading}>
+                          onChange={handleEspecificasChange}
+                          onBlur={() => validationHandleBlur(campo.name)}
+                          disabled={loading}
+                          className={getInputClassName(getFieldState(campo.name).touched, getFieldState(campo.name).error)}
+                        >
                           <option value="">Seleccionar...</option>
                           {campo.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                         </select>
-                      </div>
+                      </FieldWrapper>
                     ))}
                   </div>
                 )}
@@ -830,18 +854,38 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
                   <div className="char-group full-width">
                     <h4>Información Adicional</h4>
                     {camposActuales.filter(c => c.type === 'text' || c.type === 'textarea').map(campo => (
-                      <div key={campo.name} className="form-group">
-                        <label htmlFor={campo.name}>{campo.label}</label>
+                      <FieldWrapper
+                        key={campo.name}
+                        label={campo.label}
+                        name={campo.name}
+                        required
+                        error={getFieldState(campo.name).error}
+                        touched={getFieldState(campo.name).touched}
+                      >
                         {campo.type === 'textarea' ? (
-                          <textarea id={campo.name} name={campo.name}
+                          <textarea
+                            id={campo.name}
+                            name={campo.name}
                             value={caracteristicasEspecificas[campo.name] || ''}
-                            onChange={handleEspecificasChange} disabled={loading} rows="3" />
+                            onChange={handleEspecificasChange}
+                            onBlur={() => validationHandleBlur(campo.name)}
+                            disabled={loading}
+                            rows="3"
+                            className={getInputClassName(getFieldState(campo.name).touched, getFieldState(campo.name).error)}
+                          />
                         ) : (
-                          <input type="text" id={campo.name} name={campo.name}
+                          <input
+                            type="text"
+                            id={campo.name}
+                            name={campo.name}
                             value={caracteristicasEspecificas[campo.name] || ''}
-                            onChange={handleEspecificasChange} disabled={loading} />
+                            onChange={handleEspecificasChange}
+                            onBlur={() => validationHandleBlur(campo.name)}
+                            disabled={loading}
+                            className={getInputClassName(getFieldState(campo.name).touched, getFieldState(campo.name).error)}
+                          />
                         )}
-                      </div>
+                      </FieldWrapper>
                     ))}
                   </div>
                 )}

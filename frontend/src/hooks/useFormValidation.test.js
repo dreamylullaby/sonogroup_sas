@@ -67,13 +67,15 @@ describe('useFormValidation - Property 3: Error message mapping correctness', ()
     )
   })
 
-  it('step4 dynamic fields use FALLBACK_MESSAGE when no specific message is set', () => {
-    // Simulate camposPorTipo with random required fields
+  it('step4 dynamic fields use their configured message when validation fails', () => {
+    // Simulate camposPorTipo with various field types
     const camposPorTipo = {
       test_type: [
         { name: 'area_total', label: 'Área Total', type: 'number', required: true },
         { name: 'habitaciones', label: 'Habitaciones', type: 'number', required: true },
-        { name: 'optional_field', label: 'Optional', type: 'number' }
+        { name: 'optional_field', label: 'Optional', type: 'number' },
+        { name: 'cocina', label: 'Cocina', type: 'select', options: ['integral'] },
+        { name: 'descripcion_acabados', label: 'Acabados', type: 'textarea' }
       ]
     }
 
@@ -85,7 +87,8 @@ describe('useFormValidation - Property 3: Error message mapping correctness', ()
         emptyValueArb,
         ([fieldName, rule], emptyValue) => {
           const error = validateField(emptyValue, rule)
-          expect(error).toBe(FALLBACK_MESSAGE)
+          expect(error).not.toBeNull()
+          expect(error).toBe(rule.message)
         }
       ),
       { numRuns: 100 }

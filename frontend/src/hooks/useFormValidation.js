@@ -6,8 +6,8 @@ import { useState, useCallback } from 'react'
  */
 const validationConfig = {
   step1: {
-    tipo_inmueble: { required: true, message: 'Este campo es obligatorio' },
-    tipo_operacion: { required: true, message: 'Este campo es obligatorio' }
+    tipo_inmueble: { required: true, message: 'Selecciona una opción' },
+    tipo_operacion: { required: true, message: 'Selecciona una opción' }
   },
   step2: {
     valor: {
@@ -16,13 +16,20 @@ const validationConfig = {
       message: 'Ingresa un precio válido mayor a $0'
     },
     valor_administracion: {
-      required: false,
-      validate: (v) => v !== '' && v !== undefined && v !== null && parseFloat(v) < 0,
+      required: true,
+      validate: (v) => {
+        if (v === '' || v === undefined || v === null) return true
+        return parseFloat(v) < 0
+      },
       message: 'Ingresa 0 si no aplica administración'
     },
     descripcion: {
-      required: false,
-      validate: (v) => v && v.trim().length > 0 && v.trim().length < 10,
+      required: true,
+      validate: (v) => {
+        if (!v || v.trim().length === 0) return true
+        if (v.trim().length < 10) return true
+        return false
+      },
       message: 'El título debe tener al menos 10 caracteres'
     },
     estado_inmueble: {
@@ -32,13 +39,25 @@ const validationConfig = {
     zona: {
       required: true,
       message: 'Selecciona la zona del inmueble'
+    },
+    estrato: {
+      required: true,
+      message: 'Selecciona una opción'
+    },
+    numero_matricula: {
+      required: true,
+      message: 'Este campo es obligatorio'
+    },
+    codigo_catastral: {
+      required: true,
+      message: 'Este campo es obligatorio'
     }
   },
   step3: {
     municipio: { required: true, message: 'Selecciona el municipio del inmueble' },
     departamento: { required: true, message: 'Selecciona el departamento' },
-    barrio_vereda: { required: false, message: 'Ingresa el barrio o sector del inmueble' },
-    direccion: { required: false, message: 'Ingresa la dirección completa del inmueble' }
+    barrio_vereda: { required: true, message: 'Ingresa el barrio o sector del inmueble' },
+    direccion: { required: true, message: 'Ingresa la dirección completa del inmueble' }
   }
   // step4 is dynamic — handled via getStep4Config
 }
@@ -48,16 +67,49 @@ const FALLBACK_MESSAGE = 'Este campo es obligatorio'
 
 /**
  * Build step 4 validation config dynamically based on camposPorTipo.
- * Only required fields from the current tipo_inmueble are validated.
+ * ALL fields are required. Checkboxes are excluded (they are always valid as boolean).
+ * Numeric fields that must be > 0 get a special validator.
+ * Select fields get "Selecciona una opción" message.
+ * Text/textarea fields get "Este campo es obligatorio" message.
  */
 function getStep4Config(camposPorTipo, tipoInmueble) {
   const campos = camposPorTipo[tipoInmueble] || []
   const config = {}
+
+  // Numeric fields that do NOT accept 0 (must be > 0)
+  const noZeroFields = new Set([
+    'area_total', 'area_construida', 'area_lote', 'frente', 'fondo',
+    'habitaciones', 'banos', 'pisos', 'altura', 'altura_libre',
+    'area_cultivable', 'area_construcciones'
+  ])
+
   for (const campo of campos) {
-    if (campo.required) {
+    // Skip checkboxes — they are always valid as boolean true/false
+    if (campo.type === 'checkbox') continue
+
+    if (campo.type === 'number') {
+      const mustBePositive = noZeroFields.has(campo.name)
       config[campo.name] = {
         required: true,
-        message: FALLBACK_MESSAGE
+        validate: (v) => {
+          if (v === '' || v === undefined || v === null) return true
+          const num = Number(v)
+          if (num < 0) return true
+          if (mustBePositive && num === 0) return true
+          return false
+        },
+        message: mustBePositive ? 'El valor debe ser mayor a 0' : 'Este campo es obligatorio'
+      }
+    } else if (campo.type === 'select') {
+      config[campo.name] = {
+        required: true,
+        message: 'Selecciona una opción'
+      }
+    } else {
+      // text, textarea
+      config[campo.name] = {
+        required: true,
+        message: 'Este campo es obligatorio'
       }
     }
   }
