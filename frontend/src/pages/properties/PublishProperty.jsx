@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { api, parseApiError, ENUMS, ENUM_LABELS } from '../../config/api'
 import { buildInmueblePayload } from '../../utils/payloadMappers'
 import { validators } from '../../utils/validation'
+import FieldWrapper, { getInputClassName } from '../../components/ui/FieldWrapper'
+import StepErrorBanner from '../../components/ui/StepErrorBanner'
+import { useFormValidation } from '../../hooks/useFormValidation'
 import '../../styles/pages/PublishProperty.css'
 
 const PublishProperty = ({ editMode = false, propertyId = null }) => {
@@ -32,6 +35,7 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
   })
 
   const [caracteristicasEspecificas, setCaracteristicasEspecificas] = useState({})
+  const [stepErrorCount, setStepErrorCount] = useState(0)
 
   // Campos específicos por tipo - nombres alineados con BD v3.4
   const camposPorTipo = {
@@ -164,6 +168,23 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
       { name: 'vias_acceso', label: 'Vías de Acceso', type: 'select', options: ['pavimentada', 'afirmada', 'trocha', 'sin_via'] }
     ]
   }
+
+  // Form validation hook
+  const getFormValues = useCallback(() => ({
+    ...formDataComun,
+    ...ubicacion,
+    ...caracteristicasEspecificas
+  }), [formDataComun, ubicacion, caracteristicasEspecificas])
+
+  const {
+    handleBlur: validationHandleBlur,
+    markAllTouched,
+    validateStep: runValidateStep,
+    getFieldState,
+    getStepFields,
+    hasAttemptedSubmit,
+    setHasAttemptedSubmit
+  } = useFormValidation(getFormValues, camposPorTipo, formDataComun.tipo_inmueble)
 
   // Cargar datos si estamos en modo edición
   useEffect(() => {
@@ -332,8 +353,20 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
     return true
   }
 
-  const nextStep = () => { setError(''); if (validateStep()) setCurrentStep(prev => Math.min(prev + 1, totalSteps)) }
-  const prevStep = () => { setError(''); setCurrentStep(prev => Math.max(prev - 1, 1)) }
+  const nextStep = () => {
+    setError('')
+    const stepFields = getStepFields(currentStep)
+    markAllTouched(stepFields)
+    const result = runValidateStep(currentStep)
+    if (!result.isValid) {
+      setHasAttemptedSubmit(true)
+      setStepErrorCount(result.errorCount)
+      return
+    }
+    setStepErrorCount(0)
+    setCurrentStep(prev => Math.min(prev + 1, totalSteps))
+  }
+  const prevStep = () => { setError(''); setStepErrorCount(0); setCurrentStep(prev => Math.max(prev - 1, 1)) }
 
   return (
     <div className="publish-property-page">
@@ -377,24 +410,52 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
           {currentStep === 1 && (
             <div className="form-section step-content">
               <h3>Tipo de Inmueble y Operación</h3>
-              <div className="form-group">
-                <label htmlFor="tipo_inmueble">¿Qué tipo de inmueble? *</label>
-                <select id="tipo_inmueble" name="tipo_inmueble" value={formDataComun.tipo_inmueble}
-                  onChange={handleCommonChange} disabled={loading} required>
+              <p className="text-sm text-slate-400 italic mb-4">Los campos con * son obligatorios</p>
+              <StepErrorBanner errorCount={stepErrorCount} />
+              <FieldWrapper
+                label="¿Qué tipo de inmueble?"
+                name="tipo_inmueble"
+                required
+                error={getFieldState('tipo_inmueble').error}
+                touched={getFieldState('tipo_inmueble').touched}
+              >
+                <select
+                  id="tipo_inmueble"
+                  name="tipo_inmueble"
+                  value={formDataComun.tipo_inmueble}
+                  onChange={handleCommonChange}
+                  onBlur={() => validationHandleBlur('tipo_inmueble')}
+                  disabled={loading}
+                  required
+                  className={getInputClassName(getFieldState('tipo_inmueble').touched, getFieldState('tipo_inmueble').error)}
+                >
                   {ENUMS.tipo_inmueble.map(t => (
                     <option key={t} value={t}>{ENUM_LABELS.tipo_inmueble[t]}</option>
                   ))}
                 </select>
-              </div>
-              <div className="form-group">
-                <label htmlFor="tipo_operacion">¿Venta o arriendo? *</label>
-                <select id="tipo_operacion" name="tipo_operacion" value={formDataComun.tipo_operacion}
-                  onChange={handleCommonChange} disabled={loading} required>
+              </FieldWrapper>
+              <FieldWrapper
+                label="¿Venta o arriendo?"
+                name="tipo_operacion"
+                required
+                error={getFieldState('tipo_operacion').error}
+                touched={getFieldState('tipo_operacion').touched}
+              >
+                <select
+                  id="tipo_operacion"
+                  name="tipo_operacion"
+                  value={formDataComun.tipo_operacion}
+                  onChange={handleCommonChange}
+                  onBlur={() => validationHandleBlur('tipo_operacion')}
+                  disabled={loading}
+                  required
+                  className={getInputClassName(getFieldState('tipo_operacion').touched, getFieldState('tipo_operacion').error)}
+                >
                   {ENUMS.tipo_operacion.map(t => (
                     <option key={t} value={t}>{ENUM_LABELS.tipo_operacion[t]}</option>
                   ))}
                 </select>
-              </div>
+              </FieldWrapper>
             </div>
           )}
 
