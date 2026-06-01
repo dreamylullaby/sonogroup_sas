@@ -274,6 +274,23 @@ router.put('/:id/aprobar', verificarToken, verificarRol(['admin']), async (req, 
             })
             .eq('id_solicitud', id);
 
+        // 5. Notificar al usuario
+        await supabase.from('notificaciones').insert([{
+            id_usuario: solicitud.id_usuario,
+            tipo: 'aprobacion',
+            titulo: 'Propiedad aprobada',
+            mensaje: `Tu solicitud de publicacion ha sido aprobada. Tu ${datos.tipo_inmueble || 'propiedad'} ya esta visible en el portafolio.`,
+            id_inmueble: nuevoInmueble.id_inmueble
+        }]);
+
+        // 6. Notificar a admins
+        const { data: admins } = await supabase.from('usuarios').select('id_usuario').eq('rol', 'admin');
+        if (admins) {
+            await supabase.from('notificaciones').insert(
+                admins.map(a => ({ id_usuario: a.id_usuario, tipo: 'sistema', titulo: 'Solicitud aprobada', mensaje: `Se aprobo una solicitud de ${datos.tipo_inmueble || 'propiedad'} en ${datos.ubicacion?.municipio || 'sin ubicacion'}` }))
+            );
+        }
+
         res.json({ mensaje: 'Propiedad aprobada y publicada', propiedad: nuevoInmueble });
     } catch (error) {
         console.error('❌ Error al aprobar solicitud:', error);
@@ -300,6 +317,14 @@ router.put('/:id/rechazar', verificarToken, verificarRol(['admin']), async (req,
             .single();
 
         if (error) throw error;
+
+        // Notificar al usuario del rechazo
+        await supabase.from('notificaciones').insert([{
+            id_usuario: data.id_usuario,
+            tipo: 'rechazo',
+            titulo: 'Solicitud rechazada',
+            mensaje: motivo ? `Tu solicitud fue rechazada. Motivo: ${motivo}` : 'Tu solicitud de publicacion fue rechazada.'
+        }]);
 
         res.json({ mensaje: 'Solicitud rechazada', propiedad: data });
     } catch (error) {

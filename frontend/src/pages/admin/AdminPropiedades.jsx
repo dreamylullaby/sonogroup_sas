@@ -3,6 +3,7 @@ import { Building2, Plus, Eye, Edit2, EyeOff, Trash2, Search } from 'lucide-reac
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../config/api'
 import PropertyDetailModal from '../../components/admin/shared/PropertyDetailModal'
+import PropertyEditModal from '../../components/admin/shared/PropertyEditModal'
 
 export default function AdminPropiedades() {
   const [propiedades, setPropiedades] = useState([])
@@ -10,6 +11,7 @@ export default function AdminPropiedades() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [detailModal, setDetailModal] = useState(null)
+  const [editModal, setEditModal] = useState(null)
   const navigate = useNavigate()
 
   const fetchData = () => {
@@ -101,7 +103,7 @@ export default function AdminPropiedades() {
                   <td>
                     <div style={{ display: 'flex', gap: '0.3rem', justifyContent: 'center' }}>
                       <button className="admin-btn admin-btn--ghost" title="Ver detalles" onClick={() => setDetailModal(p)}><Eye size={13} /></button>
-                      <button className="admin-btn admin-btn--ghost" title="Editar" onClick={() => navigate(`/editar-propiedad/${p.id_inmueble}`)}><Edit2 size={13} /></button>
+                      <button className="admin-btn admin-btn--ghost" title="Editar" onClick={() => setEditModal(p)}><Edit2 size={13} /></button>
                       <button className="admin-btn admin-btn--ghost" title="Ocultar" onClick={() => handleOcultar(p.id_inmueble)}><EyeOff size={13} /></button>
                       <button className="admin-btn admin-btn--ghost" title="Eliminar" style={{ color: '#dc2626' }} onClick={() => handleEliminar(p.id_inmueble)}><Trash2 size={13} /></button>
                     </div>
@@ -115,7 +117,16 @@ export default function AdminPropiedades() {
 
       {/* Detail Modal */}
       {detailModal && (
-        <PropertyDetailModal property={detailModal} onClose={() => setDetailModal(null)} />
+        <PropertyDetailModal
+          property={detailModal}
+          onClose={() => setDetailModal(null)}
+          onEdit={(p) => { setDetailModal(null); setEditModal(p) }}
+        />
+      )}
+
+      {/* Edit Modal */}
+      {editModal && (
+        <PropertyEditModal property={editModal} onClose={() => setEditModal(null)} onSaved={fetchData} />
       )}
     </div>
   )
