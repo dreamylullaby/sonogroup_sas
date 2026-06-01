@@ -53,10 +53,48 @@ const validationConfig = {
     }
   },
   step3: {
-    municipio: { required: true, message: 'Selecciona el municipio del inmueble' },
-    departamento: { required: true, message: 'Selecciona el departamento' },
-    barrio_vereda: { required: true, message: 'Ingresa el barrio o sector del inmueble' },
-    direccion: { required: true, message: 'Ingresa la dirección completa del inmueble' }
+    municipio: {
+      required: true,
+      validate: (v) => {
+        if (!v || v.trim().length === 0) return true
+        if (v.trim().length < 3) return true
+        // Solo letras, espacios, tildes, apóstrofe y guion
+        if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s''-]+$/.test(v.trim())) return true
+        return false
+      },
+      message: 'Municipio debe tener al menos 3 caracteres y solo letras'
+    },
+    departamento: {
+      required: true,
+      validate: (v) => {
+        if (!v || v.trim().length === 0) return true
+        if (v.trim().length < 3) return true
+        return false
+      },
+      message: 'Selecciona un país válido'
+    },
+    barrio_vereda: {
+      required: true,
+      validate: (v) => {
+        if (!v || v.trim().length === 0) return true
+        if (v.trim().length < 3) return true
+        // Letras, números, espacios y guion
+        if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9\s\-]+$/.test(v.trim())) return true
+        return false
+      },
+      message: 'Barrio/Vereda debe tener al menos 3 caracteres (letras, números y espacios)'
+    },
+    direccion: {
+      required: true,
+      validate: (v) => {
+        if (!v || v.trim().length === 0) return true
+        if (v.trim().length < 8) return true
+        // Letras, números, espacios y caracteres comunes de dirección: # . , - / No. °
+        if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9\s#.,\-\/°]+$/.test(v.trim())) return true
+        return false
+      },
+      message: 'Dirección debe tener al menos 8 caracteres (Ej: Calle 18 # 24-56)'
+    }
   }
   // step4 is dynamic — handled via getStep4Config
 }

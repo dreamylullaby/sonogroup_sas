@@ -6,6 +6,7 @@ import { buildInmueblePayload } from '../../utils/payloadMappers'
 import { validators } from '../../utils/validation'
 import FieldWrapper, { getInputClassName } from '../../components/ui/FieldWrapper'
 import StepErrorBanner from '../../components/ui/StepErrorBanner'
+import CountryAutocomplete from '../../components/ui/CountryAutocomplete'
 import { useFormValidation } from '../../hooks/useFormValidation'
 import { useCurrencyFormat } from '../../hooks/useCurrencyFormat'
 import '../../styles/pages/PublishProperty.css'
@@ -300,8 +301,14 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
     const valorErr = validators.valor(formDataComun.valor)
     if (valorErr) { setError(valorErr); setLoading(false); return }
 
-    if (!ubicacion.municipio) {
-      setError('El municipio es requerido'); setLoading(false); return
+    if (!ubicacion.municipio || ubicacion.municipio.trim().length < 3) {
+      setError('El municipio es requerido (mínimo 3 caracteres)'); setLoading(false); return
+    }
+    if (!ubicacion.barrio_vereda || ubicacion.barrio_vereda.trim().length < 3) {
+      setError('El barrio/vereda es requerido (mínimo 3 caracteres)'); setLoading(false); return
+    }
+    if (!ubicacion.direccion || ubicacion.direccion.trim().length < 8) {
+      setError('La dirección es requerida (mínimo 8 caracteres)'); setLoading(false); return
     }
 
     const descErr = validators.descripcion(formDataComun.descripcion)
@@ -370,7 +377,10 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
         }
         break
       case 3:
-        if (!ubicacion.municipio) { setError('El municipio es requerido'); return false }
+        if (!ubicacion.municipio || ubicacion.municipio.trim().length < 3) { setError('El municipio es requerido (mínimo 3 caracteres)'); return false }
+        if (!ubicacion.barrio_vereda || ubicacion.barrio_vereda.trim().length < 3) { setError('El barrio/vereda es requerido (mínimo 3 caracteres)'); return false }
+        if (!ubicacion.direccion || ubicacion.direccion.trim().length < 8) { setError('La dirección es requerida (mínimo 8 caracteres)'); return false }
+        if (!ubicacion.departamento) { setError('El país es requerido'); return false }
         break
       case 4:
         const requeridos = camposActuales.filter(c => c.required)
@@ -707,7 +717,7 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
                     type="text"
                     id="municipio"
                     name="municipio"
-                    placeholder="Ej: Medellín"
+                    placeholder="Ej: Medellín, Pasto, Cali"
                     value={ubicacion.municipio}
                     onChange={handleUbicacionChange}
                     onBlur={() => validationHandleBlur('municipio')}
@@ -717,23 +727,21 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
                   />
                 </FieldWrapper>
                 <FieldWrapper
-                  label="Departamento"
+                  label="País"
                   name="departamento"
                   required
                   error={getFieldState('departamento').error}
                   touched={getFieldState('departamento').touched}
                 >
-                  <input
-                    type="text"
+                  <CountryAutocomplete
                     id="departamento"
                     name="departamento"
-                    placeholder="Ej: Antioquia"
                     value={ubicacion.departamento}
-                    onChange={handleUbicacionChange}
+                    onChange={(country) => setUbicacion(prev => ({ ...prev, departamento: country }))}
                     onBlur={() => validationHandleBlur('departamento')}
                     disabled={loading}
-                    required
-                    className={getInputClassName(getFieldState('departamento').touched, getFieldState('departamento').error)}
+                    touched={getFieldState('departamento').touched}
+                    error={getFieldState('departamento').error}
                   />
                 </FieldWrapper>
               </div>
@@ -749,11 +757,12 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
                     type="text"
                     id="barrio_vereda"
                     name="barrio_vereda"
-                    placeholder="Ej: El Poblado"
+                    placeholder="Ej: El Poblado, Ciudad 2000, Sector 3"
                     value={ubicacion.barrio_vereda}
                     onChange={handleUbicacionChange}
                     onBlur={() => validationHandleBlur('barrio_vereda')}
                     disabled={loading}
+                    required
                     className={getInputClassName(getFieldState('barrio_vereda').touched, getFieldState('barrio_vereda').error)}
                   />
                 </FieldWrapper>
@@ -768,11 +777,12 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
                     type="text"
                     id="direccion"
                     name="direccion"
-                    placeholder="Ej: Calle 123 #45-67"
+                    placeholder="Ej: Calle 18 # 24-56, Cra 32A No. 15-40"
                     value={ubicacion.direccion}
                     onChange={handleUbicacionChange}
                     onBlur={() => validationHandleBlur('direccion')}
                     disabled={loading}
+                    required
                     className={getInputClassName(getFieldState('direccion').touched, getFieldState('direccion').error)}
                   />
                 </FieldWrapper>
