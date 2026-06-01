@@ -1,8 +1,6 @@
 import { X, Edit, MapPin, Maximize, BedDouble, Bath, Car, Star, Building2, Layers, Hash, Calendar, Users as UsersIcon, CheckCircle } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
 
-export default function PropertyDetailModal({ property, onClose }) {
-  const navigate = useNavigate()
+export default function PropertyDetailModal({ property, onClose, onEdit }) {
   if (!property) return null
 
   const p = property
@@ -42,7 +40,7 @@ export default function PropertyDetailModal({ property, onClose }) {
             </div>
           </div>
           <div className="pdm__header-actions">
-            <button className="admin-btn admin-btn--primary admin-btn--sm" onClick={() => { onClose(); navigate(`/editar-propiedad/${p.id_inmueble}`) }}>
+            <button className="admin-btn admin-btn--primary admin-btn--sm" onClick={() => { if (onEdit) onEdit(p) }}>
               <Edit size={12} /> Editar
             </button>
             <button className="pdm__close" onClick={onClose}><X size={18} /></button>

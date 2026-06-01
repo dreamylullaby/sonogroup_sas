@@ -2,7 +2,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Building2, FileText, Users,
   MessageSquare, Bell, BarChart3, Activity,
-  ChevronLeft, ChevronRight, Home, ArrowLeft
+  ChevronLeft, ChevronRight
 } from 'lucide-react'
 
 const NAV_MAIN = [
@@ -30,14 +30,12 @@ export default function AdminSidebar({ collapsed, onToggle }) {
 
   return (
     <aside className={`admin-sidebar ${collapsed ? 'admin-sidebar--collapsed' : ''}`}>
-      {/* Logo — click goes to home */}
+      {/* Logo */}
       <div className="admin-sidebar__logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }} title="Ir a la página principal">
-        <div className="admin-sidebar__logo-icon">
-          <Home size={14} />
-        </div>
+        <img src="/src/assets/images/logo_sonogroup_blanco.png" alt="Sonogroup" className="admin-sidebar__logo-img" />
         <div className="admin-sidebar__logo-text-wrap">
           <span className="admin-sidebar__logo-name">SONOGROUP</span>
-          <span className="admin-sidebar__logo-sub">Real Estate</span>
+          <span className="admin-sidebar__logo-sub">S.A.S</span>
         </div>
       </div>
 
@@ -83,22 +81,6 @@ export default function AdminSidebar({ collapsed, onToggle }) {
           })}
         </ul>
 
-        <hr className="admin-sidebar__divider" />
-
-        {/* Back to main site */}
-        <ul>
-          <li>
-            <button
-              className="admin-sidebar__nav-item"
-              onClick={() => navigate('/')}
-              title="Volver a la página principal"
-              style={{ color: 'rgba(255,255,255,0.4)' }}
-            >
-              <ArrowLeft size={16} />
-              <span>Volver al sitio</span>
-            </button>
-          </li>
-        </ul>
       </nav>
 
       {/* Toggle */}

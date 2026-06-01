@@ -31,6 +31,14 @@ router.post('/', async (req, res) => {
 
         if (error) throw error;
 
+        // Notificar a admins de nuevo contacto
+        const { data: admins } = await supabase.from('usuarios').select('id_usuario').eq('rol', 'admin');
+        if (admins && admins.length > 0) {
+            await supabase.from('notificaciones').insert(
+                admins.map(a => ({ id_usuario: a.id_usuario, tipo: 'contacto', titulo: 'Nuevo mensaje de contacto', mensaje: `${nombre} envio un mensaje: ${asunto || 'Contacto general'}` }))
+            );
+        }
+
         res.status(201).json({
             mensaje: 'Mensaje enviado exitosamente',
             contacto: data
