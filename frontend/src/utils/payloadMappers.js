@@ -169,8 +169,12 @@ export function buildInmueblePayload(formDataComun, ubicacion, servicios, caract
 
   return {
     valor: parseFloat(formDataComun.valor),
-    valor_administracion: formDataComun.valor_administracion ? parseFloat(formDataComun.valor_administracion) : null,
-    estrato: parseInt(formDataComun.estrato) || null,
+    valor_administracion: (formDataComun.valor_administracion !== '' && formDataComun.valor_administracion != null)
+      ? parseFloat(formDataComun.valor_administracion)
+      : null,
+    estrato: (formDataComun.estrato && formDataComun.estrato !== 'no_aplica')
+      ? parseInt(formDataComun.estrato)
+      : null,
     descripcion: formDataComun.descripcion || null,
     numero_matricula: formDataComun.numero_matricula || null,
     codigo_catastral: formDataComun.codigo_catastral || null,

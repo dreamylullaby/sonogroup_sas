@@ -19,7 +19,9 @@ const validationConfig = {
       required: true,
       validate: (v) => {
         if (v === '' || v === undefined || v === null) return true
-        return parseFloat(v) < 0
+        const num = parseFloat(v)
+        if (isNaN(num)) return true
+        return num < 0
       },
       message: 'Ingresa 0 si no aplica administración'
     },
@@ -42,6 +44,11 @@ const validationConfig = {
     },
     estrato: {
       required: true,
+      validate: (v) => {
+        // 'no_aplica' is a valid selection, only empty/null/undefined is invalid
+        if (v === '' || v === undefined || v === null) return true
+        return false
+      },
       message: 'Selecciona una opción'
     }
   },

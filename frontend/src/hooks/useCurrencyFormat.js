@@ -8,11 +8,12 @@ const formatter = new Intl.NumberFormat('es-CO', {
 
 /**
  * Formats a raw numeric value as Colombian pesos (COP).
- * Returns null for empty/zero values (show placeholder instead).
+ * Returns empty string for truly empty values; formats $0 correctly.
  */
 export function formatCOP(value) {
+  if (value === '' || value === null || value === undefined) return ''
   const num = typeof value === 'string' ? parseFloat(value) : value
-  if (!num || num === 0) return ''
+  if (isNaN(num)) return ''
   return formatter.format(num)
 }
 
@@ -56,9 +57,8 @@ export function useCurrencyFormat(rawValue, onChange) {
   // Compute display value
   let displayValue
   if (isFocused) {
-    // Show raw numeric value when focused (for editing)
-    const num = typeof rawValue === 'string' ? rawValue : String(rawValue || '')
-    displayValue = num === '0' ? '' : num
+    // Show raw numeric value when focused (for editing); preserve '0'
+    displayValue = (rawValue === null || rawValue === undefined) ? '' : String(rawValue)
   } else {
     // Show formatted value when blurred
     displayValue = formatCOP(rawValue)

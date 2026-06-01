@@ -21,7 +21,7 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
   const totalSteps = 4
 
   const [formDataComun, setFormDataComun] = useState({
-    valor: '', valor_administracion: '', estrato: '3', descripcion: '',
+    valor: '', valor_administracion: '', estrato: '', descripcion: '',
     numero_matricula: '', codigo_catastral: '',
     tipo_operacion: 'venta', tipo_inmueble: 'casa', estado_inmueble: 'nuevo',
     zona: 'urbano', acepta_permuta: false
@@ -211,8 +211,8 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
 
       setFormDataComun({
         valor: property.valor || '',
-        valor_administracion: property.valor_administracion || '',
-        estrato: property.estrato?.toString() || '3',
+        valor_administracion: (property.valor_administracion != null) ? String(property.valor_administracion) : '',
+        estrato: property.estrato ? property.estrato.toString() : 'no_aplica',
         descripcion: property.descripcion || '',
         numero_matricula: property.numero_matricula || '',
         codigo_catastral: property.codigo_catastral || '',
@@ -553,7 +553,8 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
                     disabled={loading}
                     className={getInputClassName(getFieldState('estrato').touched, getFieldState('estrato').error)}
                   >
-                    <option value="">No aplica</option>
+                    <option value="" disabled>-- Seleccionar --</option>
+                    <option value="no_aplica">No aplica</option>
                     {[1, 2, 3, 4, 5, 6].map(e => <option key={e} value={e}>{e}</option>)}
                   </select>
                 </FieldWrapper>
