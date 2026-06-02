@@ -26,9 +26,9 @@ export const validators = {
     return null
   },
 
-  // Teléfono: formato 7-20 dígitos (constraint chk_telefono_format)
+  // Teléfono: formato 7-20 dígitos, obligatorio
   telefono: (value) => {
-    if (!value) return null // opcional
+    if (!value || !value.trim()) return 'El teléfono es obligatorio'
     const regex = /^[0-9()+\-\s]{7,20}$/
     if (!regex.test(value)) return 'Teléfono inválido (7-20 caracteres, solo números y símbolos)'
     return null

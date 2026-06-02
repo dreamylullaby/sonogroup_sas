@@ -1,24 +1,25 @@
 .favorites-page {
   width: 100%;
+  padding: 4rem 2rem 2rem;
 }
 
 .favorites-header {
-  text-align: center;
-  margin-bottom: 3rem;
+  text-align: left;
+  margin-bottom: 2rem;
 }
 
 .favorites-header h1 {
   font-family: var(--font-heading);
-  font-size: 2.75rem;
+  font-size: 2rem;
   font-weight: 700;
   color: var(--primary-color);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.35rem;
   letter-spacing: -0.5px;
 }
 
 .favorites-header p {
   color: var(--text-light);
-  font-size: 1.1rem;
+  font-size: 0.9rem;
 }
 
 .favorites-grid {
