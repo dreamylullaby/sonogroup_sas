@@ -24,7 +24,7 @@ export const ENUMS = {
   estado_aprobacion: ['pendiente', 'aprobado', 'rechazado'],
   estado_contacto: ['pendiente', 'respondido', 'cerrado'],
   tipo_cocina: ['integral', 'semi_integral', 'sencilla'],
-  tipo_sala_comedor: ['sala', 'comedor', 'sala_comedor'],
+  tipo_sala_comedor: ['sala', 'comedor', 'sala_comedor', 'separados'],
   tipo_parqueadero_casa: ['interno', 'externo', 'cubierto', 'descubierto', 'ninguno'],
   tipo_parqueadero_apto: ['privado', 'comun', 'ninguno'],
   tipo_topografia: ['plana', 'inclinada', 'irregular', 'semiondulada', 'ondulada'],

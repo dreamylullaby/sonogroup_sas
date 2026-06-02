@@ -1,7 +1,7 @@
 .myp-page {
   min-height: 100vh;
-  background: #f4f6f9;
-  padding: 2rem 1rem 4rem;
+  background: #F4F0F8;
+  padding: 4rem 1.5rem 4rem;
 }
 
 .myp-container {
@@ -241,72 +241,72 @@
 .myp-solicitudes {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 10px;
 }
 
 .myp-solicitud-card {
   background: #fff;
-  border-radius: 14px;
-  padding: 1.25rem 1.5rem;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  border-radius: 12px;
+  padding: 16px 20px;
+  border: 0.5px solid #e0d8ec;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 1rem;
 }
 
-.sol-info { flex: 1; display: flex; flex-direction: column; gap: 0.3rem; }
+.sol-info { flex: 1; display: flex; flex-direction: column; gap: 0.25rem; }
 
 .sol-tipo {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-weight: 700;
-  color: #1a2332;
-  font-size: 1rem;
+  font-weight: 600;
+  color: #241929;
+  font-size: 0.88rem;
   text-transform: capitalize;
 }
 
 .sol-op {
-  font-size: 0.75rem;
-  background: #f0f0f0;
-  color: #666;
+  font-size: 0.68rem;
+  background: #F4F0F8;
+  color: #5A4864;
   padding: 2px 8px;
   border-radius: 20px;
   font-weight: 500;
   text-transform: capitalize;
 }
 
-.sol-precio { font-size: 1rem; font-weight: 600; color: #c0392b; margin: 0; }
-.sol-ubicacion { font-size: 0.85rem; color: #666; margin: 0; }
-.sol-desc { font-size: 0.82rem; color: #888; margin: 0; line-height: 1.4; }
-.sol-fecha { font-size: 0.75rem; color: #bbb; margin: 0; }
+.sol-precio { font-size: 0.9rem; font-weight: 600; color: #CC1E2B; margin: 0; }
+.sol-ubicacion { font-size: 0.78rem; color: #5A4864; margin: 0; }
+.sol-desc { font-size: 0.75rem; color: #8097B7; margin: 0; line-height: 1.4; }
+.sol-fecha { font-size: 0.7rem; color: #8097B7; margin: 0; }
 
 .sol-estado {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 0.5rem;
+  gap: 0.4rem;
   flex-shrink: 0;
 }
 
 .estado-badge {
-  font-size: 0.75rem;
-  font-weight: 700;
-  padding: 4px 12px;
-  border-radius: 20px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 6px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.06em;
 }
 
-.badge-pendiente { background: #fef3c7; color: #d97706; }
-.badge-aprobado { background: #d1fae5; color: #059669; }
-.badge-rechazado { background: #fef2f2; color: #c0392b; }
+.badge-pendiente { background: #FEF3C7; color: #D97706; }
+.badge-aprobado { background: #E8F5EE; color: #1a7a48; }
+.badge-rechazado { background: #FCE8EC; color: #8C1132; }
 
 .sol-motivo {
-  font-size: 0.78rem;
-  color: #c0392b;
-  max-width: 200px;
+  font-size: 0.72rem;
+  color: #8C1132;
+  max-width: 180px;
   text-align: right;
   margin: 0;
 }
@@ -316,3 +316,91 @@
   .sol-estado { align-items: flex-start; }
   .sol-motivo { text-align: left; }
 }
+
+/* DELETE MODAL */
+.myp-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 27, 46, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1rem;
+}
+
+.myp-modal {
+  background: #fff;
+  border-radius: 14px;
+  padding: 28px;
+  max-width: 380px;
+  width: 100%;
+  border: 0.5px solid #e0d8ec;
+  text-align: center;
+}
+
+.myp-modal-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #FCE8EC;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+}
+
+.myp-modal h3 {
+  font-size: 16px;
+  font-weight: 500;
+  color: #241929;
+  margin: 0 0 8px;
+}
+
+.myp-modal p {
+  font-size: 13px;
+  color: #5A4864;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.myp-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.myp-modal-btn-delete {
+  width: 100%;
+  padding: 10px;
+  background: transparent;
+  color: #8C1132;
+  border: 0.5px solid #f0b8c4;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.myp-modal-btn-delete:hover { background: #FCE8EC; }
+
+.myp-modal-btn-cancel {
+  width: 100%;
+  padding: 10px;
+  background: #F4F0F8;
+  color: #5A4864;
+  border: 0.5px solid #e0d8ec;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.myp-modal-btn-cancel:hover { background: #e0d8ec; }
