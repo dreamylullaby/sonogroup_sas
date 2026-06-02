@@ -1,13 +1,15 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Search, User, FileText, MessageCircle, Shield, Info, ChevronDown, Headphones, Send } from 'lucide-react'
 import '../../styles/pages/HelpCenter.css'
 
-const DATA = [
+const CATEGORIES = [
   {
     id: 'cuenta',
-    icon: '👤',
+    icon: User,
     label: 'Cuenta',
-    popular: [0, 1],
+    color: '#3B82F6',
+    bg: '#EFF6FF',
     faqs: [
       { q: '¿Cómo creo una cuenta?', a: 'Haz clic en "Registrarse" en la barra de navegación. Completa el formulario con tu nombre, correo, número de identificación y contraseña. Recibirás acceso inmediato.' },
       { q: '¿Cómo cambio mi contraseña?', a: 'Ve a Configuración de la cuenta → Seguridad → Cambiar contraseña. Ingresa tu contraseña actual y la nueva. El cambio se aplica de inmediato.' },
@@ -18,67 +20,72 @@ const DATA = [
   },
   {
     id: 'publicacion',
-    icon: '🏠',
+    icon: FileText,
     label: 'Publicación',
-    popular: [0, 1],
+    color: '#CC1E2B',
+    bg: '#FEF2F2',
     faqs: [
-      { q: '¿Cómo publico un inmueble?', a: 'Haz clic en "Publicar" en el menú de navegación. Completa el formulario en 4 pasos: tipo de inmueble, detalles, ubicación y características específicas. Al enviar, quedará en revisión.' },
-      { q: '¿Cuánto tarda la aprobación?', a: 'El administrador revisa las solicitudes en un plazo de 24 a 48 horas hábiles. Recibirás una notificación cuando tu publicación sea aprobada o rechazada.' },
-      { q: '¿Cómo edito una publicación?', a: 'Solo los administradores pueden editar publicaciones aprobadas. Si necesitas hacer cambios, contacta al soporte indicando el ID de tu propiedad.' },
-      { q: '¿Cómo elimino una publicación?', a: 'Ve a "Mis Propiedades" → pestaña "Publicadas". Encontrarás el botón "Eliminar" en cada tarjeta. La eliminación es permanente.' },
-      { q: '¿Por qué fue rechazada mi publicación?', a: 'El administrador puede rechazar publicaciones con información incompleta, imágenes de baja calidad o que no cumplan las políticas de la plataforma. Revisa el motivo en "Mis Solicitudes".' },
-      { q: '¿Puedo publicar varios inmuebles?', a: 'Sí, puedes enviar tantas solicitudes de publicación como necesites. Cada una pasa por el proceso de revisión de forma independiente.' },
+      { q: '¿Cómo publico un inmueble?', a: 'Haz clic en "Publicar" en el menú de navegación. Completa los 4 pasos y tu propiedad quedará en revisión.' },
+      { q: '¿Cuánto tarda la aprobación?', a: 'El administrador revisa en 24-48 horas hábiles. Recibirás una notificación con el resultado.' },
+      { q: '¿Cómo edito una publicación?', a: 'Solo los administradores pueden editar publicaciones aprobadas. Contacta al soporte indicando el ID de tu propiedad.' },
+      { q: '¿Cómo elimino una publicación?', a: 'Ve a "Mis Propiedades" → pestaña "Publicadas". Encontrarás el botón "Eliminar" en cada tarjeta.' },
+      { q: '¿Por qué fue rechazada mi publicación?', a: 'Puede ser por información incompleta o imágenes de baja calidad. Revisa el motivo en "Mis Solicitudes".' },
+      { q: '¿Puedo publicar varios inmuebles?', a: 'Sí, puedes enviar tantas solicitudes como necesites. Cada una pasa por revisión independiente.' },
     ]
   },
   {
     id: 'busqueda',
-    icon: '🔍',
+    icon: Search,
     label: 'Búsqueda y favoritos',
-    popular: [0, 2],
+    color: '#059669',
+    bg: '#ECFDF5',
     faqs: [
-      { q: '¿Cómo busco propiedades?', a: 'Ve a la sección "Propiedades" desde el menú. Puedes filtrar por tipo de inmueble, tipo de operación (venta/arriendo), ubicación y rango de precio.' },
-      { q: '¿Cómo filtro por barrio o estrato?', a: 'En la página de Propiedades, usa el campo "Ubicación" para escribir el nombre del barrio o municipio. El filtro de estrato está disponible en los filtros avanzados.' },
-      { q: '¿Cómo agrego una propiedad a favoritos?', a: 'En la tarjeta de cada propiedad encontrarás un ícono de corazón. Haz clic para guardarla. Debes estar registrado para usar esta función.' },
-      { q: '¿Dónde veo mis favoritos?', a: 'En el menú desplegable de tu perfil, selecciona "Listas de favoritos". Allí encontrarás todas las propiedades que has guardado.' },
-      { q: '¿Puedo compartir una propiedad?', a: 'Sí, desde el detalle de cada propiedad puedes copiar el enlace directo para compartirlo por cualquier medio.' },
+      { q: '¿Cómo busco propiedades?', a: 'Ve a "Propiedades" y filtra por tipo, operación, ubicación y rango de precio.' },
+      { q: '¿Cómo filtro por barrio o estrato?', a: 'Usa el campo "Ubicación" para el barrio. El filtro de estrato está en filtros avanzados.' },
+      { q: '¿Cómo agrego a favoritos?', a: 'En cada tarjeta de propiedad hay un ícono de corazón. Debes estar registrado.' },
+      { q: '¿Dónde veo mis favoritos?', a: 'En el menú de tu perfil, selecciona "Listas de favoritos".' },
+      { q: '¿Puedo compartir una propiedad?', a: 'Sí, desde el detalle puedes copiar el enlace directo para compartirlo.' },
     ]
   },
   {
     id: 'contacto',
-    icon: '💬',
+    icon: MessageCircle,
     label: 'Contacto y solicitudes',
-    popular: [0, 1],
+    color: '#7C3AED',
+    bg: '#F5F3FF',
     faqs: [
-      { q: '¿Cómo contacto a un propietario?', a: 'Desde el detalle de la propiedad, encontrarás la información de contacto del propietario o un formulario para enviarle un mensaje directamente.' },
-      { q: '¿Cómo contacto al administrador?', a: 'Ve a la sección "Contacto" en el menú principal. Completa el formulario indicando tu consulta. El equipo responde en un plazo de 24 horas hábiles.' },
-      { q: '¿Qué hago si recibo spam o mensajes inapropiados?', a: 'Usa el formulario de contacto y selecciona el asunto "Queja o Reclamo". Describe la situación y el equipo tomará las medidas necesarias.' },
-      { q: '¿Puedo ver el historial de mis mensajes?', a: 'Sí, en el menú de tu perfil encontrarás la sección "Mensajes" donde puedes ver todas tus conversaciones.' },
+      { q: '¿Cómo contacto a un propietario?', a: 'Desde el detalle de la propiedad encontrarás la información de contacto o un formulario de mensaje.' },
+      { q: '¿Cómo contacto al administrador?', a: 'Ve a "Contacto" en el menú. El equipo responde en 24 horas hábiles.' },
+      { q: '¿Qué hago si recibo spam?', a: 'Usa el formulario de contacto con asunto "Queja o Reclamo".' },
+      { q: '¿Puedo ver mis mensajes?', a: 'Sí, en tu perfil encontrarás la sección "Mensajes" con todas tus conversaciones.' },
     ]
   },
   {
     id: 'seguridad',
-    icon: '🔒',
+    icon: Shield,
     label: 'Seguridad y privacidad',
-    popular: [0, 2],
+    color: '#0891B2',
+    bg: '#ECFEFF',
     faqs: [
-      { q: '¿Cómo cierro sesiones activas en otros dispositivos?', a: 'Ve a Configuración → Seguridad → Dispositivos conectados. Verás la lista de sesiones activas y podrás cerrar cada una individualmente o todas a la vez.' },
-      { q: '¿Cómo oculto mi información personal?', a: 'En Configuración → Privacidad, activa "Ocultar información personal". Esto ocultará tu teléfono y correo en tus publicaciones.' },
-      { q: '¿Qué hago si alguien accedió a mi cuenta sin permiso?', a: 'Cambia tu contraseña inmediatamente desde Configuración → Seguridad. Luego cierra todas las sesiones activas. Si el problema persiste, contacta a soporte.' },
-      { q: '¿Cómo hago mi perfil privado?', a: 'En Configuración → Privacidad, desactiva "Perfil público". Tu perfil dejará de ser visible para otros usuarios.' },
-      { q: '¿SONOGROUP comparte mis datos con terceros?', a: 'No. Tu información personal es confidencial y solo se usa para el funcionamiento de la plataforma. Consulta nuestra política de privacidad para más detalles.' },
+      { q: '¿Cómo cierro sesiones en otros dispositivos?', a: 'Ve a Configuración → Seguridad → Dispositivos conectados. Cierra las que no reconozcas.' },
+      { q: '¿Cómo oculto mi información personal?', a: 'En Configuración → Privacidad, activa "Ocultar información personal".' },
+      { q: '¿Qué hago si accedieron a mi cuenta?', a: 'Cambia tu contraseña y cierra todas las sesiones. Si persiste, contacta soporte.' },
+      { q: '¿Cómo hago mi perfil privado?', a: 'En Configuración → Privacidad, desactiva "Perfil público".' },
+      { q: '¿Comparten mis datos con terceros?', a: 'No. Tu información es confidencial. Consulta la política de privacidad.' },
     ]
   },
   {
     id: 'general',
-    icon: '📋',
+    icon: Info,
     label: 'General',
-    popular: [0, 1],
+    color: '#64748B',
+    bg: '#F8FAFC',
     faqs: [
-      { q: '¿Cuáles son los horarios de soporte?', a: 'Nuestro equipo de soporte está disponible de lunes a viernes de 9:00 a 18:00 y sábados de 9:00 a 13:00 (hora Colombia).' },
-      { q: '¿Hay tutoriales o guías de uso?', a: 'Próximamente publicaremos guías en video y documentación detallada. Por ahora, este Centro de Ayuda cubre las preguntas más frecuentes.' },
-      { q: '¿La plataforma es gratuita?', a: 'El registro y la búsqueda de propiedades son completamente gratuitos. La publicación de inmuebles también es gratuita en su versión actual.' },
-      { q: '¿En qué ciudades opera SONOGROUP?', a: 'Actualmente operamos en todo el territorio colombiano. Puedes publicar y buscar propiedades en cualquier municipio del país.' },
-      { q: '¿Cómo reporto un error en la plataforma?', a: 'Usa el formulario de Contacto y selecciona "Queja o Reclamo". Describe el error con el mayor detalle posible para que podamos resolverlo rápidamente.' },
+      { q: '¿Cuáles son los horarios de soporte?', a: 'Lunes a viernes 9:00-18:00, sábados 9:00-13:00 (hora Colombia).' },
+      { q: '¿Hay tutoriales o guías?', a: 'Próximamente publicaremos guías en video. Por ahora, este Centro de Ayuda cubre las preguntas frecuentes.' },
+      { q: '¿La plataforma es gratuita?', a: 'El registro, búsqueda y publicación son completamente gratuitos.' },
+      { q: '¿En qué ciudades opera SONOGROUP?', a: 'En todo el territorio colombiano. Publica y busca en cualquier municipio.' },
+      { q: '¿Cómo reporto un error?', a: 'Usa el formulario de Contacto con asunto "Queja o Reclamo" y describe el error.' },
     ]
   },
 ]
@@ -86,152 +93,167 @@ const DATA = [
 const HelpCenter = () => {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
-  const [openCategory, setOpenCategory] = useState(null)
+  const [activeCategory, setActiveCategory] = useState(null)
   const [openFaq, setOpenFaq] = useState({})
+  const searchRef = useRef(null)
 
-  const toggleCategory = (id) => setOpenCategory(prev => prev === id ? null : id)
-  const toggleFaq = (catId, idx) => setOpenFaq(prev => ({
-    ...prev, [`${catId}-${idx}`]: !prev[`${catId}-${idx}`]
-  }))
+  // Keyboard shortcut Ctrl+K
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault()
+        searchRef.current?.focus()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
+
+  const toggleFaq = (key) => setOpenFaq(prev => ({ ...prev, [key]: !prev[key] }))
 
   const searchResults = useMemo(() => {
     if (!search.trim()) return null
     const q = search.toLowerCase()
     const results = []
-    DATA.forEach(cat => {
+    CATEGORIES.forEach(cat => {
       cat.faqs.forEach((faq, idx) => {
         if (faq.q.toLowerCase().includes(q) || faq.a.toLowerCase().includes(q)) {
-          results.push({ ...faq, catLabel: cat.label, catIcon: cat.icon, catId: cat.id, idx })
+          results.push({ ...faq, catLabel: cat.label, catColor: cat.color, catId: cat.id, idx })
         }
       })
     })
     return results
   }, [search])
 
-  const popularFaqs = DATA.flatMap(cat =>
-    cat.popular.map(idx => ({ ...cat.faqs[idx], catLabel: cat.label, catIcon: cat.icon }))
-  ).slice(0, 6)
+  const popularFaqs = useMemo(() => {
+    return CATEGORIES.flatMap(cat =>
+      cat.faqs.slice(0, 2).map((faq, idx) => ({ ...faq, catLabel: cat.label, catColor: cat.color, catId: cat.id, idx }))
+    ).slice(0, 6)
+  }, [])
 
   return (
     <div className="help-page">
       {/* HERO */}
       <div className="help-hero">
-        <h1>Centro de Ayuda</h1>
-        <p>¿En qué podemos ayudarte hoy?</p>
+        <span className="help-hero__badge"><Headphones size={14} /> CENTRO DE AYUDA</span>
+        <h1>¿En qué podemos ayudarte?</h1>
+        <p>Encuentra respuestas, guías y soporte para todo lo que necesitas</p>
         <div className="help-search-wrap">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-          </svg>
+          <Search size={18} className="help-search-icon" />
           <input
+            ref={searchRef}
             type="text"
             placeholder="Buscar en todas las categorías..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={e => { setSearch(e.target.value); setActiveCategory(null) }}
             className="help-search"
           />
-          {search && (
-            <button className="help-search-clear" onClick={() => setSearch('')}>✕</button>
-          )}
         </div>
       </div>
 
       <div className="help-container">
-
-        {/* RESULTADOS DE BÚSQUEDA */}
-        {searchResults !== null && (
-          <div className="help-search-results">
-            <h2>{searchResults.length > 0 ? `${searchResults.length} resultado${searchResults.length !== 1 ? 's' : ''} para "${search}"` : `Sin resultados para "${search}"`}</h2>
+        {/* SEARCH RESULTS */}
+        {searchResults !== null ? (
+          <section className="help-section">
+            <h2 className="help-section__title">
+              {searchResults.length > 0 ? `${searchResults.length} resultado${searchResults.length !== 1 ? 's' : ''}` : 'Sin resultados'}
+            </h2>
             {searchResults.length === 0 && (
-              <p className="help-no-results">Intenta con otras palabras o <button onClick={() => navigate('/contacto')}>contacta a soporte</button>.</p>
+              <p className="help-empty">Intenta con otras palabras o <button onClick={() => navigate('/contacto')}>contacta a soporte</button>.</p>
             )}
-            {searchResults.map((r, i) => (
-              <div key={i} className="help-result-item">
-                <span className="help-result-cat">{r.catIcon} {r.catLabel}</span>
-                <p className="help-result-q">{r.q}</p>
-                <p className="help-result-a">{r.a}</p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* POPULARES */}
-        {!search && (
-          <div className="help-popular">
-            <h2>Preguntas frecuentes</h2>
-            <div className="help-popular-grid">
-              {popularFaqs.map((f, i) => (
-                <div key={i} className="help-popular-card">
-                  <span className="help-popular-icon">{f.catIcon}</span>
-                  <div>
-                    <p className="help-popular-cat">{f.catLabel}</p>
-                    <p className="help-popular-q">{f.q}</p>
-                    <p className="help-popular-a">{f.a}</p>
-                  </div>
+            <div className="help-results-list">
+              {searchResults.map((r, i) => (
+                <div key={i} className="help-result-card">
+                  <span className="help-result-badge" style={{ color: r.catColor }}>● {r.catLabel.toUpperCase()}</span>
+                  <p className="help-result-q">{r.q}</p>
+                  <p className="help-result-a">{r.a}</p>
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          </section>
+        ) : (
+          <>
+            {/* CATEGORIES GRID */}
+            <section className="help-section">
+              <h2 className="help-section__title">EXPLORAR POR CATEGORÍA</h2>
+              <div className="help-categories-grid">
+                {CATEGORIES.map(cat => {
+                  const Icon = cat.icon
+                  return (
+                    <button
+                      key={cat.id}
+                      className={`help-category-card ${activeCategory === cat.id ? 'active' : ''}`}
+                      onClick={() => setActiveCategory(activeCategory === cat.id ? null : cat.id)}
+                    >
+                      <span className="help-category-icon" style={{ background: cat.bg, color: cat.color }}>
+                        <Icon size={18} />
+                      </span>
+                      <div>
+                        <span className="help-category-label">{cat.label}</span>
+                        <span className="help-category-count">{cat.faqs.length} artículos</span>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
 
-        {/* CATEGORÍAS */}
-        {!search && (
-          <div className="help-categories">
-            <h2>Explorar por categoría</h2>
-            {DATA.map(cat => (
-              <div key={cat.id} className={`help-cat ${openCategory === cat.id ? 'open' : ''}`}>
-                <button className="help-cat-header" onClick={() => toggleCategory(cat.id)}>
-                  <span className="help-cat-icon">{cat.icon}</span>
-                  <span className="help-cat-label">{cat.label}</span>
-                  <span className="help-cat-count">{cat.faqs.length} preguntas</span>
-                  <svg className="help-cat-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="6 9 12 15 18 9"/>
-                  </svg>
-                </button>
-
-                <div className="help-cat-body">
-                  {cat.faqs.map((faq, idx) => {
-                    const key = `${cat.id}-${idx}`
+            {/* ACTIVE CATEGORY FAQ LIST */}
+            {activeCategory && (
+              <section className="help-section help-active-category">
+                <h2 className="help-section__title">
+                  {CATEGORIES.find(c => c.id === activeCategory)?.label}
+                </h2>
+                <div className="help-faq-list">
+                  {CATEGORIES.find(c => c.id === activeCategory)?.faqs.map((faq, idx) => {
+                    const key = `${activeCategory}-${idx}`
                     const isOpen = !!openFaq[key]
                     return (
-                      <div key={idx} className={`help-faq ${isOpen ? 'open' : ''}`}>
-                        <button className="help-faq-q" onClick={() => toggleFaq(cat.id, idx)}>
+                      <div key={idx} className={`help-faq-item ${isOpen ? 'open' : ''}`}>
+                        <button className="help-faq-q" onClick={() => toggleFaq(key)}>
                           <span>{faq.q}</span>
-                          <svg className="help-faq-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <polyline points="6 9 12 15 18 9"/>
-                          </svg>
+                          <ChevronDown size={16} className="help-faq-chevron" />
                         </button>
-                        <div className="help-faq-a">
-                          <p>{faq.a}</p>
-                        </div>
+                        {isOpen && <div className="help-faq-a"><p>{faq.a}</p></div>}
                       </div>
                     )
                   })}
                 </div>
+              </section>
+            )}
+
+            {/* POPULAR FAQs */}
+            <section className="help-section">
+              <h2 className="help-section__title">Preguntas frecuentes</h2>
+              <div className="help-popular-grid">
+                {popularFaqs.map((faq, i) => (
+                  <div key={i} className="help-popular-card" onClick={() => { setActiveCategory(faq.catId); setOpenFaq({ [`${faq.catId}-${faq.idx}`]: true }) }} style={{ cursor: 'pointer' }}>
+                    <span className="help-popular-badge" style={{ color: faq.catColor }}>● {faq.catLabel.toUpperCase()}</span>
+                    <p className="help-popular-q">{faq.q}</p>
+                    <p className="help-popular-a">{faq.a}</p>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </section>
+          </>
         )}
 
-        {/* CTA SOPORTE */}
+        {/* CTA */}
         <div className="help-cta">
           <div className="help-cta-icon">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            </svg>
+            <Headphones size={28} />
           </div>
-          <div>
+          <div className="help-cta-text">
             <h3>¿No encontraste lo que buscabas?</h3>
             <p>Nuestro equipo de soporte está listo para ayudarte.</p>
           </div>
           <button className="help-cta-btn" onClick={() => navigate('/contacto')}>
-            Contactar soporte
+            <Send size={14} /> CONTACTAR SOPORTE
           </button>
         </div>
-
       </div>
     </div>
   )
 }
 
 export default HelpCenter
-

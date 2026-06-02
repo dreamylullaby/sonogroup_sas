@@ -8,6 +8,7 @@ import { errorHandler, notFound } from './middleware/errorHandler.js';
 import authRoutes from './modules/auth/auth.routes.js';
 import passwordResetRoutes from './modules/password/password-reset.routes.js';
 import inmueblesRoutes from './modules/inmuebles/inmuebles.routes.js';
+import inmueblesSearchRoutes from './modules/inmuebles/inmuebles-search.routes.js';
 import inmueblesAdminRoutes from './modules/inmuebles/inmuebles-admin.routes.js';
 import propiedadesPendientesRoutes from './modules/inmuebles/propiedades-pendientes.routes.js';
 import usuariosRoutes from './modules/usuarios/usuarios.routes.js';
@@ -29,6 +30,7 @@ import solicitudesCuentaRoutes from './modules/solicitudes/solicitudes-cuenta.ro
 import configuracionRoutes from './modules/configuracion/configuracion.routes.js';
 import statsRoutes from './modules/admin/stats.routes.js';
 import adminStatsRoutes from './modules/admin/admin-stats.routes.js';
+import borradoresRoutes from './modules/borradores/borradores.routes.js';
 
 dotenv.config();
 
@@ -76,6 +78,7 @@ app.get('/', (req, res) => {
 // ─── Rutas de la API ───────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/auth', passwordResetRoutes);
+app.use('/api/inmuebles/buscar', inmueblesSearchRoutes);
 app.use('/api/inmuebles', inmueblesRoutes);
 app.use('/api/inmuebles-admin', inmueblesAdminRoutes);
 app.use('/api/propiedades-pendientes', propiedadesPendientesRoutes);
@@ -102,6 +105,7 @@ app.use('/api/lotes', lotesRoutes);
 
 // Rutas admin consolidadas
 app.use('/api/admin/stats', adminStatsRoutes);
+app.use('/api/borradores', borradoresRoutes);
 
 // Middleware de manejo de errores
 app.use(notFound);

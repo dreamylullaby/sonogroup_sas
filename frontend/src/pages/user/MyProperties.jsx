@@ -14,6 +14,7 @@ const MyProperties = () => {
   const [solicitudes, setSolicitudes] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [deleteModal, setDeleteModal] = useState(null)
 
   useEffect(() => { if (user) cargarDatos() }, [user])
 
@@ -35,12 +36,13 @@ const MyProperties = () => {
   }
 
   const eliminarPropiedad = async (id) => {
-    if (!window.confirm('¿Estás seguro de eliminar esta propiedad?')) return
     try {
       await api.delete(`/api/inmuebles/${id}`)
       setPublicadas(prev => prev.filter(p => p.id_inmueble !== id))
+      setDeleteModal(null)
     } catch (err) {
       setError(parseApiError(err))
+      setDeleteModal(null)
     }
   }
 
@@ -123,7 +125,7 @@ const MyProperties = () => {
                     <p className="myp-fecha">{formatFecha(p.fecha_registro)}</p>
                     <div className="myp-actions">
                       <button className="btn-ver" onClick={() => navigate(`/propiedad/${p.id_inmueble}`)}>{t('ver')}</button>
-                      <button className="btn-eliminar" onClick={() => eliminarPropiedad(p.id_inmueble)}>{t('eliminar')}</button>
+                      <button className="btn-eliminar" onClick={() => setDeleteModal(p)}>{t('eliminar')}</button>
                     </div>
                   </div>
                 </div>
@@ -175,6 +177,31 @@ const MyProperties = () => {
           )
         )}
       </div>
+
+      {/* DELETE MODAL */}
+      {deleteModal && (
+        <div className="myp-modal-overlay">
+          <div className="myp-modal">
+            <div className="myp-modal-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#CC1E2B" strokeWidth="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+            </div>
+            <h3>¿Solicitar eliminación?</h3>
+            <p>Tu solicitud será revisada por un administrador. Si es aprobada, la propiedad será removida del portafolio.</p>
+            <div className="myp-modal-actions">
+              <button className="myp-modal-btn-delete" onClick={() => eliminarPropiedad(deleteModal.id_inmueble)}>
+                Solicitar eliminación
+              </button>
+              <button className="myp-modal-btn-cancel" onClick={() => setDeleteModal(null)}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

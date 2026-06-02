@@ -1,132 +1,140 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { usePreferences } from '../../context/PreferencesContext'
 import { api, parseApiError } from '../../config/api'
-import PropertyFilters from '../../components/property/PropertyFilters'
+import PropertySearchBar from '../../components/property/PropertySearchBar'
 import PropertyCard from '../../components/property/PropertyCard'
 import '../../styles/pages/Properties.css'
 
+const SORT_OPTIONS = [
+  { value: 'recientes', label: 'Más recientes' },
+  { value: 'precio_asc', label: 'Precio menor a mayor' },
+  { value: 'precio_desc', label: 'Precio mayor a menor' },
+  { value: 'area_mayor', label: 'Mayor área' },
+  { value: 'area_menor', label: 'Menor área' }
+]
+
 const Properties = () => {
   const [properties, setProperties] = useState([])
-  const [filteredProperties, setFilteredProperties] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [sortBy, setSortBy] = useState('recientes')
+  const [currentFilters, setCurrentFilters] = useState({})
   const { t } = usePreferences()
 
-  useEffect(() => { fetchProperties() }, [])
+  useEffect(() => { fetchProperties({}) }, [])
 
-  const transformInmueble = (inmueble) => ({
-    id: inmueble.id_inmueble,
-    id_inmueble: inmueble.id_inmueble,
-    titulo: inmueble.descripcion?.substring(0, 50) || `${inmueble.tipo_inmueble} en ${inmueble.ubicaciones?.municipio || 'venta'}`,
-    ubicacion: inmueble.ubicaciones?.municipio || inmueble.zona || 'Ubicación no especificada',
-    precio: inmueble.valor,
-    habitaciones: inmueble.caracteristicas?.habitaciones || 0,
-    banos: inmueble.caracteristicas?.banos || 0,
-    area: inmueble.caracteristicas?.area_total || inmueble.caracteristicas?.area_construida || 0,
-    tipo: inmueble.tipo_inmueble,
-    estado: inmueble.tipo_operacion,
-    descripcion: inmueble.descripcion,
-    imagen: inmueble.fotografias?.[0]?.url_foto || 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=400',
-    estrato: inmueble.estrato,
-    estado_inmueble: inmueble.estado_inmueble
-  })
-
-  const fetchProperties = async () => {
+  const fetchProperties = async (searchParams) => {
     try {
       setLoading(true)
-      const response = await api.get('/api/inmuebles')
-      const transformed = (response.data.inmuebles || []).map(transformInmueble)
-      setProperties(transformed)
-      setFilteredProperties(transformed)
       setError(null)
+
+      const params = new URLSearchParams()
+      Object.entries(searchParams).forEach(([key, value]) => {
+        if (value !== '' && value !== undefined && value !== null) {
+          params.append(key, value)
+        }
+      })
+
+      const queryString = params.toString()
+      const url = queryString ? `/api/inmuebles/buscar?${queryString}` : '/api/inmuebles/buscar'
+
+      const response = await api.get(url)
+      setProperties(response.data.inmuebles || [])
     } catch (err) {
       setError(parseApiError(err))
-      setProperties([])
-      setFilteredProperties([])
+      // Fallback to basic endpoint
+      try {
+        const response = await api.get('/api/inmuebles')
+        setProperties(response.data.inmuebles || [])
+        setError(null)
+      } catch {
+        setProperties([])
+      }
     } finally {
       setLoading(false)
     }
   }
 
-  const handleFilterChange = async (filters) => {
-    try {
-      setLoading(true)
+  const handleSearch = useCallback((searchParams) => {
+    setCurrentFilters(searchParams)
+    fetchProperties({ ...searchParams, orden: sortBy })
+  }, [sortBy])
 
-      const params = new URLSearchParams()
-      if (filters.tipo) params.append('tipo_inmueble', filters.tipo)
-      if (filters.estado) params.append('tipo_operacion', filters.estado)
-      if (filters.ubicacion) params.append('municipio', filters.ubicacion)
-      if (filters.precioMin) params.append('precio_min', filters.precioMin)
-      if (filters.precioMax) params.append('precio_max', filters.precioMax)
-
-      const queryString = params.toString()
-      const url = queryString ? `/api/inmuebles?${queryString}` : '/api/inmuebles'
-
-      const response = await api.get(url)
-      let transformed = (response.data.inmuebles || []).map(transformInmueble)
-
-      // Filtros client-side para habitaciones y baños
-      if (filters.habitaciones) {
-        transformed = transformed.filter(p => p.habitaciones >= Number(filters.habitaciones))
-      }
-      if (filters.banos) {
-        transformed = transformed.filter(p => p.banos >= Number(filters.banos))
-      }
-
-      setFilteredProperties(transformed)
-      setError(null)
-    } catch (err) {
-      // Fallback: filtrar localmente
-      let filtered = [...properties]
-      if (filters.tipo) filtered = filtered.filter(p => p.tipo === filters.tipo)
-      if (filters.estado) filtered = filtered.filter(p => p.estado === filters.estado)
-      if (filters.ubicacion) filtered = filtered.filter(p => p.ubicacion.toLowerCase().includes(filters.ubicacion.toLowerCase()))
-      if (filters.precioMin) filtered = filtered.filter(p => p.precio >= Number(filters.precioMin))
-      if (filters.precioMax) filtered = filtered.filter(p => p.precio <= Number(filters.precioMax))
-      if (filters.habitaciones) filtered = filtered.filter(p => p.habitaciones >= Number(filters.habitaciones))
-      if (filters.banos) filtered = filtered.filter(p => p.banos >= Number(filters.banos))
-      setFilteredProperties(filtered)
-    } finally {
-      setLoading(false)
-    }
+  const handleSortChange = (newSort) => {
+    setSortBy(newSort)
+    fetchProperties({ ...currentFilters, orden: newSort })
   }
 
   return (
     <div className="properties-page">
       <section className="page-header">
-        <h1>{t('nuestrasPropiedades')}</h1>
-        <p>{t('exploraPortafolio')}</p>
+        <h1>{t('nuestrasPropiedades') || 'Encuentra tu propiedad ideal'}</h1>
+        <p>{t('exploraPortafolio') || 'Explora nuestro portafolio de propiedades'}</p>
       </section>
 
-      <PropertyFilters onFilterChange={handleFilterChange} />
+      <PropertySearchBar onSearch={handleSearch} loading={loading} />
 
       <section className="properties-section">
-        <div className="properties-header">
-          <h2>{t('propiedadesDisponibles')}</h2>
-          <span className="results-count">
-            {filteredProperties.length} {filteredProperties.length === 1 ? t('resultado') : t('resultados')}
-          </span>
+        <div className="properties-toolbar">
+          <div className="properties-count">
+            <span className="properties-count__number">{properties.length}</span>
+            <span className="properties-count__text">
+              {properties.length === 1 ? 'propiedad encontrada' : 'propiedades encontradas'}
+            </span>
+          </div>
+
+          <div className="properties-sort">
+            <label htmlFor="sort-select" className="properties-sort__label">Ordenar por:</label>
+            <select
+              id="sort-select"
+              className="properties-sort__select"
+              value={sortBy}
+              onChange={(e) => handleSortChange(e.target.value)}
+            >
+              {SORT_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {loading && (
-          <div className="loading">
-            <div className="loading-spinner"></div>
-            <p>{t('cargandoPropiedades')}</p>
+          <div className="properties-loading">
+            <div className="skeleton-grid">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="skeleton-card">
+                  <div className="skeleton-card__image skeleton-pulse"></div>
+                  <div className="skeleton-card__body">
+                    <div className="skeleton-card__line skeleton-pulse" style={{ width: '70%' }}></div>
+                    <div className="skeleton-card__line skeleton-pulse" style={{ width: '50%' }}></div>
+                    <div className="skeleton-card__line skeleton-pulse" style={{ width: '40%' }}></div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
         {error && !loading && properties.length === 0 && (
-          <div className="error"><p>⚠️ {error}</p></div>
+          <div className="properties-empty">
+            <div className="properties-empty__icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+            <h3>Error al cargar propiedades</h3>
+            <p>{error}</p>
+          </div>
         )}
 
-        {!loading && filteredProperties.length === 0 && (
-          <div className="no-results"><p>{t('noResultados')}</p></div>
+        {!loading && !error && properties.length === 0 && (
+          <div className="properties-empty">
+            <div className="properties-empty__icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+            <h3>No se encontraron propiedades</h3>
+            <p>Intenta ajustar los filtros de búsqueda para encontrar más resultados.</p>
+          </div>
         )}
 
-        {!loading && filteredProperties.length > 0 && (
+        {!loading && properties.length > 0 && (
           <div className="properties-grid">
-            {filteredProperties.map(property => (
-              <PropertyCard key={property.id} property={property} />
+            {properties.map(property => (
+              <PropertyCard key={property.id_inmueble} property={property} />
             ))}
           </div>
         )}
@@ -136,6 +144,3 @@ const Properties = () => {
 }
 
 export default Properties
-
-
-
