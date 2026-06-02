@@ -3,83 +3,88 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 2rem;
+  padding: 4rem 1.5rem 2rem;
 }
 
 .register-container {
   background-color: var(--white);
-  padding: 3rem;
+  padding: 2.5rem;
   border-radius: 12px;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+  border: 0.5px solid #e0d8ec;
   width: 100%;
-  max-width: 500px;
+  max-width: 400px;
 }
 
 .register-header {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .register-header h1 {
   font-family: var(--font-heading);
-  font-size: 2.25rem;
+  font-size: 1.75rem;
   font-weight: 700;
   color: var(--primary-color);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.35rem;
   letter-spacing: -0.5px;
 }
 
-.brand-subtitle {
-  font-family: var(--font-primary);
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--accent-color);
-  letter-spacing: 1px;
-  margin-bottom: 0.25rem;
+.register-header .brand-subtitle {
+  font-size: 0.72rem;
+  color: #8097B7;
 }
 
 .register-header p {
   color: var(--text-light);
   font-weight: 400;
+  font-size: 0.82rem;
 }
 
 .register-form {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1rem;
 }
 
 .register-form .form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.3rem;
 }
 
 .register-form .form-group label {
   font-weight: 500;
-  color: var(--text-color);
+  color: #5A4864;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.register-form .form-group input {
-  padding: 0.875rem;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  font-size: 1rem;
-  transition: border-color 0.3s ease;
+.register-form .form-group input,
+.register-form .form-group select {
+  padding: 0.7rem 0.85rem;
+  border: 0.5px solid #e0d8ec;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  background: #F4F0F8;
+  transition: border-color 0.2s;
 }
 
-.register-form .form-group input:focus {
+.register-form .form-group input:focus,
+.register-form .form-group select:focus {
   outline: none;
-  border-color: var(--primary-color);
+  border-color: #3D518C;
+  background: #fff;
 }
 
 .register-form .form-group input::placeholder {
-  color: var(--text-light);
+  color: #8097B7;
 }
 
 .register-form .form-group small {
-  color: var(--text-light);
-  font-size: 0.85rem;
+  color: #8097B7;
+  font-size: 0.72rem;
 }
 
 .error-message {
@@ -92,23 +97,20 @@
 }
 
 .btn-register {
-  padding: 1rem;
-  background-color: var(--accent-color);
+  padding: 0.75rem;
+  background-color: #CC1E2B;
   color: white;
   border: none;
-  border-radius: 4px;
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: 0.5px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s;
   font-family: var(--font-primary);
 }
 
 .btn-register:hover:not(:disabled) {
-  background-color: var(--accent-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(226, 6, 19, 0.3);
+  background-color: #A31622;
 }
 
 .btn-register:disabled {
@@ -141,4 +143,18 @@
   .register-header h1 {
     font-size: 1.5rem;
   }
+}
+
+/* Form row (two columns) */
+.register-form .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.register-form .form-row .form-group input,
+.register-form .form-row .form-group select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }

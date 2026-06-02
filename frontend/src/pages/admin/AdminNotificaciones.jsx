@@ -12,6 +12,8 @@ export default function AdminNotificaciones() {
   }
   useEffect(() => { fetchData() }, [])
 
+  const noLeidas = notificaciones.filter(n => !n.leida)
+
   const marcarTodas = async () => { await api.put('/api/notificaciones/leer-todas'); fetchData() }
 
   return (
@@ -19,19 +21,21 @@ export default function AdminNotificaciones() {
       <div className="admin-page__header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 className="admin-page__title">Notificaciones</h1>
-          <p className="admin-page__subtitle">Centro de notificaciones del sistema</p>
+          <p className="admin-page__subtitle">Centro de notificaciones del sistema · {noLeidas.length} sin leer</p>
         </div>
-        <button onClick={marcarTodas} style={{ padding: '0.4rem 0.8rem', border: '1px solid #e0e0e0', borderRadius: '6px', background: 'white', fontSize: '0.68rem', fontWeight: 500, color: '#666', cursor: 'pointer' }}>Marcar todas como leídas</button>
+        {noLeidas.length > 0 && (
+          <button onClick={marcarTodas} style={{ padding: '0.4rem 0.8rem', border: '1px solid #e0e0e0', borderRadius: '6px', background: 'white', fontSize: '0.68rem', fontWeight: 500, color: '#666', cursor: 'pointer' }}>Marcar todas como leídas</button>
+        )}
       </div>
 
       <div className="admin-card">
         {loading ? (
           <div className="admin-card__empty"><p>Cargando...</p></div>
-        ) : notificaciones.length === 0 ? (
-          <div className="admin-card__empty"><Bell size={32} /><p>No hay notificaciones</p><p className="sub">Las alertas aparecerán aquí</p></div>
+        ) : noLeidas.length === 0 ? (
+          <div className="admin-card__empty"><Bell size={32} /><p>No hay notificaciones pendientes</p><p className="sub">Cuando lleguen nuevas alertas aparecerán aquí</p></div>
         ) : (
           <div className="admin-card__body">
-            {notificaciones.map(n => (
+            {noLeidas.map(n => (
               <div key={n.id_notificacion} style={{ padding: '0.85rem 1.5rem', borderBottom: '1px solid #f8f8f8', borderLeft: !n.leida ? '3px solid #E20613' : '3px solid transparent', display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
                 <div style={{ width: 6, height: 6, borderRadius: '50%', background: !n.leida ? '#E20613' : '#ddd', marginTop: 5, flexShrink: 0 }}></div>
                 <div>

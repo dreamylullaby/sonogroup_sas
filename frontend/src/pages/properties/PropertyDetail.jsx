@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { api, parseApiError, ENUM_LABELS } from '../../config/api'
+import { api, parseApiError } from '../../config/api'
 import { validators } from '../../utils/validation'
 import '../../styles/pages/PropertyDetail.css'
 
@@ -115,11 +115,16 @@ const PropertyDetail = () => {
   }
 
   const formatPrice = (price) => {
-    return new Intl.NumberFormat('es-ES', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0
+    if (!price) return '$ 0'
+    return '$ ' + new Intl.NumberFormat('es-CO', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(price)
+  }
+
+  const capitalize = (str) => {
+    if (!str) return ''
+    return str.replace(/\b\w/g, l => l.toUpperCase())
   }
 
   if (loading) {
@@ -186,92 +191,132 @@ const PropertyDetail = () => {
 
       {/* Título y ubicación */}
       <div className="detail-header-info">
-        <h1>{property.descripcion || 'Propiedad'}</h1>
+        <h1>{property.descripcion || `${capitalize(property.tipo_inmueble)} en ${capitalize(property.ubicaciones?.municipio) || 'venta'}`}</h1>
         <div className="header-meta">
           <span className="location-badge">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
               <circle cx="12" cy="10" r="3"></circle>
             </svg>
-            {property.ubicaciones?.municipio}, {property.ubicaciones?.departamento}
+            {capitalize(property.ubicaciones?.barrio_vereda) ? `${capitalize(property.ubicaciones.barrio_vereda)}, ` : ''}
+            {capitalize(property.ubicaciones?.municipio)}
+            {property.ubicaciones?.departamento && property.ubicaciones.departamento !== 'Colombia' ? `, ${capitalize(property.ubicaciones.departamento)}` : ''}
           </span>
-          <span className="property-id">ID: {property.id_inmueble}</span>
         </div>
       </div>
 
-      {/* Galería de imágenes estilo grid */}
-      <div className="detail-image-gallery-grid">
-        <div className="main-image">
-          <img 
-            src={property.imagen || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&h=500&fit=crop'} 
-            alt={property.descripcion}
-          />
-        </div>
-        <div className="secondary-images">
-          <div className="secondary-image">
-            <img src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&h=300&fit=crop" alt="Vista 2" />
-          </div>
-          <div className="secondary-image">
-            <img src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&h=300&fit=crop" alt="Vista 3" />
-          </div>
-          <div className="secondary-image">
-            <img src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&h=300&fit=crop" alt="Vista 4" />
-          </div>
-          <div className="secondary-image">
-            <img src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&h=300&fit=crop" alt="Vista 5" />
-            <button className="btn-show-all">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-                <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-              </svg>
-              Mostrar todas las fotos
-            </button>
-          </div>
-        </div>
-      </div>
-
+      {/* Main content with sidebar */}
       <div className="detail-content">
         <div className="detail-main">
+          {/* Owner banner */}
+          {user && property.id_usuario === user.id_usuario && (
+            <div className="detail-owner-banner">
+              <span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                Esta es tu publicación
+              </span>
+              <button onClick={() => navigate(user.rol === 'admin' ? `/editar-propiedad/${id}` : '/mis-propiedades')}>Editar propiedad</button>
+            </div>
+          )}
+
+          {/* Galería de imágenes */}
+          <div className="detail-image-gallery-grid">
+            {property.fotografias && property.fotografias.length > 0 ? (
+              <>
+                <div className="main-image">
+                  <img src={property.fotografias[0]?.url_foto} alt="Principal" />
+                </div>
+                <div className="secondary-images">
+                  {property.fotografias.slice(1, 5).map((foto, i) => (
+                    <div key={i} className="secondary-image">
+                      <img src={foto.url_foto} alt={`Vista ${i + 2}`} />
+                      {i === 3 && property.fotografias.length > 5 && (
+                        <button className="btn-show-all">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                            <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+                          </svg>
+                          +{property.fotografias.length - 5} fotos
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="detail-no-images">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c0b8d0" strokeWidth="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                </svg>
+                <span>Sin imágenes disponibles</span>
+              </div>
+            )}
+          </div>
+
           <div className="detail-price-section">
-            <span className={`detail-badge ${property.tipo_operacion}`}>
-              {property.tipo_operacion === 'venta' ? 'En Venta' : 'En Arriendo'}
-            </span>
+            <div className="detail-badges">
+              <span className={`detail-badge ${property.tipo_operacion}`}>
+                {property.tipo_operacion === 'venta' ? 'En Venta' : 'En Arriendo'}
+              </span>
+              <span className="detail-badge tipo">{capitalize(property.tipo_inmueble)}</span>
+              {property.estrato && <span className="detail-badge estrato">Estrato {property.estrato}</span>}
+            </div>
             <h2 className="detail-price">{formatPrice(property.valor)}</h2>
+            <span className="detail-price-currency">COP{property.tipo_operacion === 'arriendo' ? ' / mes' : ''}</span>
+            {property.valor_administracion > 0 && (
+              <span className="detail-admin-fee">Administración: {formatPrice(property.valor_administracion)}/mes</span>
+            )}
+
+            {/* Quick stats chips */}
+            {property.caracteristicas && (
+              <div className="detail-quick-stats">
+                {property.caracteristicas.area_construida && (
+                  <div className="quick-chip"><span className="quick-chip-value">{property.caracteristicas.area_construida} m²</span><span className="quick-chip-label">Área</span></div>
+                )}
+                {property.caracteristicas.area_total && (
+                  <div className="quick-chip"><span className="quick-chip-value">{property.caracteristicas.area_total} m²</span><span className="quick-chip-label">Área total</span></div>
+                )}
+                {property.caracteristicas.habitaciones && (
+                  <div className="quick-chip"><span className="quick-chip-value">{property.caracteristicas.habitaciones}</span><span className="quick-chip-label">Habitaciones</span></div>
+                )}
+                {property.caracteristicas.banos && (
+                  <div className="quick-chip"><span className="quick-chip-value">{property.caracteristicas.banos}</span><span className="quick-chip-label">Baños</span></div>
+                )}
+                {property.caracteristicas.parqueadero_cantidad > 0 && (
+                  <div className="quick-chip"><span className="quick-chip-value">{property.caracteristicas.parqueadero_cantidad}</span><span className="quick-chip-label">Parqueaderos</span></div>
+                )}
+                {property.caracteristicas.pisos && (
+                  <div className="quick-chip"><span className="quick-chip-value">{property.caracteristicas.pisos}</span><span className="quick-chip-label">Pisos</span></div>
+                )}
+                {property.caracteristicas.piso && (
+                  <div className="quick-chip"><span className="quick-chip-value">{property.caracteristicas.piso}</span><span className="quick-chip-label">Piso</span></div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Información General */}
-          <div className="detail-info-grid">
-            <div className="info-item">
-              <strong>Tipo de Inmueble:</strong>
-              <span>{property.tipo_inmueble?.charAt(0).toUpperCase() + property.tipo_inmueble?.slice(1)}</span>
-            </div>
-            <div className="info-item">
-              <strong>Estado:</strong>
-              <span>{property.estado_inmueble?.charAt(0).toUpperCase() + property.estado_inmueble?.slice(1)}</span>
-            </div>
-            <div className="info-item">
-              <strong>Estrato:</strong>
-              <span>{property.estrato}</span>
-            </div>
-            <div className="info-item">
-              <strong>Zona:</strong>
-              <span>{property.zona?.charAt(0).toUpperCase() + property.zona?.slice(1)}</span>
-            </div>
-            {property.acepta_permuta && (
-              <div className="info-item">
-                <strong>Permuta:</strong>
-                <span>Acepta permuta</span>
+          <div className="detail-info-card">
+            <h3>Detalles</h3>
+            <div className="detail-info-rows">
+              <div className="detail-info-row">
+                <span className="detail-info-label">Tipo de inmueble</span>
+                <span className="detail-info-value">{capitalize(property.tipo_inmueble)}</span>
               </div>
-            )}
-            {property.valor_administracion && (
-              <div className="info-item">
-                <strong>Administración:</strong>
-                <span>{formatPrice(property.valor_administracion)}/mes</span>
+              <div className="detail-info-row">
+                <span className="detail-info-label">Estado</span>
+                <span className="detail-info-value">{capitalize(property.estado_inmueble)}</span>
               </div>
-            )}
-            <div className="info-item">
-              <strong>Matrícula:</strong>
-              <span>{property.numero_matricula}</span>
+              {property.estrato && (
+                <div className="detail-info-row">
+                  <span className="detail-info-label">Estrato</span>
+                  <span className="detail-info-value">{property.estrato}</span>
+                </div>
+              )}
+              <div className="detail-info-row">
+                <span className="detail-info-label">Zona</span>
+                <span className="detail-info-value">{capitalize(property.zona)}</span>
+              </div>
             </div>
           </div>
 
@@ -281,17 +326,29 @@ const PropertyDetail = () => {
               <h3>Características</h3>
               <div className="characteristics-grid">
                 {Object.entries(property.caracteristicas).map(([key, value]) => {
-                  if (key === 'id_inmueble' || key === `id_${property.tipo_inmueble}` || value === null) return null
-                  
+                  if (key === 'id_inmueble' || key.startsWith('id_') || value === null || typeof value === 'boolean') return null
                   const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-                  
                   return (
                     <div key={key} className="char-item">
-                      <strong>{label}:</strong>
-                      <span>{typeof value === 'boolean' ? (value ? 'Sí' : 'No') : value}</span>
+                      <strong>{label}</strong>
+                      <span>{value}</span>
                     </div>
                   )
                 })}
+              </div>
+              {/* Amenidades (boolean fields) */}
+              <div className="detail-amenities">
+                <span className="amenities-label">Amenidades</span>
+                <div className="amenities-chips">
+                  {Object.entries(property.caracteristicas).filter(([key, value]) => typeof value === 'boolean' && !key.startsWith('id_')).map(([key, value]) => {
+                    const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                    return (
+                      <span key={key} className={`amenity-chip ${value ? 'amenity-chip--yes' : 'amenity-chip--no'}`}>
+                        {value ? '✓' : '✗'} {label}
+                      </span>
+                    )
+                  })}
+                </div>
               </div>
             </div>
           )}
@@ -320,51 +377,61 @@ const PropertyDetail = () => {
             <div className="detail-location-info">
               <h3>Ubicación</h3>
               <div className="location-details">
-                <p><strong>Dirección:</strong> {property.ubicaciones.direccion}</p>
+                {property.ubicaciones.direccion && <p><strong>Dirección:</strong> {capitalize(property.ubicaciones.direccion)}</p>}
                 {property.ubicaciones.barrio_vereda && (
-                  <p><strong>Barrio/Vereda:</strong> {property.ubicaciones.barrio_vereda}</p>
+                  <p><strong>Barrio/Vereda:</strong> {capitalize(property.ubicaciones.barrio_vereda)}</p>
                 )}
-                <p><strong>Municipio:</strong> {property.ubicaciones.municipio}</p>
-                <p><strong>Departamento:</strong> {property.ubicaciones.departamento}</p>
+                <p><strong>Municipio:</strong> {capitalize(property.ubicaciones.municipio)}</p>
+                <p><strong>Departamento:</strong> {property.ubicaciones.departamento && property.ubicaciones.departamento !== 'Colombia' ? capitalize(property.ubicaciones.departamento) : <em style={{ color: '#8097B7' }}>No especificado</em>}</p>
               </div>
             </div>
           )}
         </div>
 
         <div className="detail-sidebar">
-          {/* Solo mostrar cuadro de contacto si NO es admin */}
-          {user?.rol !== 'admin' && (
-            <div className="contact-card">
-              <h3>¿Interesado en esta propiedad?</h3>
-              <p>Contáctanos para más información</p>
-              <button onClick={handleContact} className="btn-contact">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {/* Contacto con formulario inline */}
+          <div className="contact-card">
+            <h3>¿Interesado en esta propiedad?</h3>
+            <p>Envía un mensaje a Sonogroup</p>
+            <div className="sidebar-contact-form">
+              <input type="text" placeholder="Tu nombre" defaultValue={user?.nombre || ''} readOnly={!!user} />
+              <input type="tel" placeholder="Teléfono" defaultValue={user?.telefono || ''} />
+              <input type="email" placeholder="Correo electrónico" defaultValue={user?.email || ''} readOnly={!!user} />
+              <textarea rows="3" defaultValue={`Hola, vi esta propiedad en Sonogroup y me interesa recibir más información. ¡Gracias!`} />
+              <button className="btn-send-msg" onClick={handleContact}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
                   <polyline points="22,6 12,13 2,6"></polyline>
                 </svg>
                 Contactar
               </button>
-              {!user && (
-                <p className="login-hint">
-                  <Link to="/login">Inicia sesión</Link> para contactar
-                </p>
-              )}
             </div>
-          )}
+            {property.usuarios?.telefono && (
+              <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                <a href={`tel:+57${property.usuarios.telefono.replace(/\D/g, '')}`} className="btn-whatsapp" style={{ flex: 1, color: '#3D518C', borderColor: '#c0c8f0' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/></svg>
+                  Llamar
+                </a>
+                <a href={`https://wa.me/57${property.usuarios.telefono.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="btn-whatsapp" style={{ flex: 1 }}>
+                  <img src="/src/assets/images/logo_whatsapp.png" alt="WhatsApp" style={{ width: '16px', height: '16px' }} />
+                  WhatsApp
+                </a>
+              </div>
+            )}
+            {!user && (
+              <p className="login-hint"><Link to="/login">Inicia sesión</Link> para contactar</p>
+            )}
+          </div>
 
           <div className="info-card">
-            <h4>Información adicional</h4>
-            <div className="info-item">
-              <span>ID:</span>
-              <strong>{property.id_inmueble}</strong>
+            <h4>Información de la publicación</h4>
+            <div className="pub-info-row">
+              <span>Operación</span>
+              <strong>{property.tipo_operacion === 'venta' ? 'Venta' : 'Arriendo'}</strong>
             </div>
-            <div className="info-item">
-              <span>Publicado:</span>
-              <strong>{property.fecha_registro ? new Date(property.fecha_registro).toLocaleDateString('es-ES', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              }) : 'No disponible'}</strong>
+            <div className="pub-info-row">
+              <span>Publicado</span>
+              <strong>{property.fecha_registro ? new Date(property.fecha_registro).toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}</strong>
             </div>
           </div>
         </div>
