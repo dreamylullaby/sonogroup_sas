@@ -59,7 +59,7 @@ const Register = () => {
     const result = await register({
       nombre: formData.nombre,
       email: formData.email,
-      telefono: formData.telefono || null,
+      telefono: formData.telefono,
       tipo_identificacion: formData.tipo_identificacion,
       numero_identificacion: formData.numero_identificacion,
       password: formData.password
@@ -102,10 +102,10 @@ const Register = () => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="telefono">{t('telefono')}</label>
+            <label htmlFor="telefono">{t('telefono')} *</label>
             <input type="tel" id="telefono" name="telefono" placeholder="3001234567"
               value={formData.telefono} onChange={handleChange} disabled={loading}
-              aria-invalid={!!fieldErrors.telefono} />
+              required aria-invalid={!!fieldErrors.telefono} />
             {fieldErrors.telefono && <small className="field-error">{fieldErrors.telefono}</small>}
           </div>
 
