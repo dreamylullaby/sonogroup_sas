@@ -257,6 +257,7 @@
   font-family: 'Montserrat', sans-serif;
   transition: border-color 0.2s, background 0.2s;
   width: 100%;
+  margin-bottom: 0.5rem;
 }
 
 .field__input::placeholder,
@@ -823,5 +824,9 @@
 
   .form-row--3 {
     grid-template-columns: 1fr;
+  }
+
+  .publish-form {
+    padding: 1.25rem 1rem;
   }
 }
