@@ -437,6 +437,94 @@
   color: var(--pp-blue);
 }
 
+/* ═══════════════════════════════════════════
+   REGISTRAL SECTION (STEP 2)
+   ═══════════════════════════════════════════ */
+.registral-section {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.registral-section__header {
+  margin-bottom: 1.25rem;
+}
+
+.registral-section__header h4 {
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 0.25rem;
+}
+
+.registral-section__help {
+  font-size: 0.8125rem;
+  color: #64748b;
+  font-weight: 400;
+}
+
+/* ═══════════════════════════════════════════
+   PERMUTA SECTION (STEP 2)
+   ═══════════════════════════════════════════ */
+.permuta-section {
+  background: #fafbfc;
+  border: 1px solid #f1f5f9;
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.permuta-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  cursor: pointer;
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+.permuta-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  cursor: pointer;
+  accent-color: #E20613;
+  flex-shrink: 0;
+}
+
+.permuta-label-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.permuta-label-group span {
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.permuta-label-group small {
+  font-size: 0.8125rem;
+  color: #64748b;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+/* ═══════════════════════════════════════════
+   CHARACTERISTICS GRID (STEP 4)
+   ═══════════════════════════════════════════ */
+.characteristics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+  width: 100%;
 .chip__check {
   width: 14px;
   height: 14px;
@@ -806,6 +894,17 @@
     grid-template-columns: repeat(2, 1fr);
   }
 
+  .registral-section {
+    padding: 1.25rem 1rem;
+  }
+
+  .permuta-section {
+    padding: 0.875rem 1rem;
+  }
+
+  .form-navigation {
+    flex-direction: column-reverse;
+    gap: 0.75rem;
   .stepper__label {
     font-size: 9px;
   }

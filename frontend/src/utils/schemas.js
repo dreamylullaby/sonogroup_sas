@@ -60,12 +60,25 @@ export const inmuebleStep2Schema = {
 export const inmuebleStep3Schema = {
   municipio: [(v) => {
     if (!v) return 'El municipio es requerido'
-    if (v.trim().length < 2) return 'Municipio debe tener al menos 2 caracteres'
+    if (v.trim().length < 3) return 'Municipio debe tener al menos 3 caracteres'
+    if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s''\-]+$/.test(v.trim())) return 'Municipio solo permite letras, espacios y tildes'
     return null
   }],
   departamento: [(v) => {
-    if (!v) return 'El departamento es requerido'
-    if (v.trim().length < 2) return 'Departamento debe tener al menos 2 caracteres'
+    if (!v) return 'El país es requerido'
+    if (v.trim().length < 3) return 'País debe tener al menos 3 caracteres'
+    return null
+  }],
+  barrio_vereda: [(v) => {
+    if (!v) return 'El barrio/vereda es requerido'
+    if (v.trim().length < 3) return 'Barrio/Vereda debe tener al menos 3 caracteres'
+    if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9\s\-]+$/.test(v.trim())) return 'Barrio/Vereda solo permite letras, números, espacios y guion'
+    return null
+  }],
+  direccion: [(v) => {
+    if (!v) return 'La dirección es requerida'
+    if (v.trim().length < 8) return 'Dirección debe tener al menos 8 caracteres'
+    if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9\s#.,\-\/°]+$/.test(v.trim())) return 'Dirección contiene caracteres no permitidos'
     return null
   }]
 }

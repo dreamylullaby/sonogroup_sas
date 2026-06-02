@@ -3,6 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { api, parseApiError, ENUMS, ENUM_LABELS } from '../../config/api'
 import { buildInmueblePayload } from '../../utils/payloadMappers'
+import { validators } from '../../utils/validation'
+import FieldWrapper, { getInputClassName } from '../../components/ui/FieldWrapper'
+import StepErrorBanner from '../../components/ui/StepErrorBanner'
+import CountryAutocomplete from '../../components/ui/CountryAutocomplete'
+import { useFormValidation } from '../../hooks/useFormValidation'
+import { useCurrencyFormat } from '../../hooks/useCurrencyFormat'
 import { DEPARTAMENTOS, getMunicipios } from '../../config/ubicaciones-colombia'
 import {
   Home, DollarSign, MapPin, Zap, Ruler, DoorOpen, Star, ClipboardList,
@@ -25,6 +31,8 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
   const [toast, setToast] = useState(null)
   const totalSteps = 4
 
+  const [formDataComun, setFormDataComun] = useState({
+    valor: '', valor_administracion: '', estrato: '', descripcion: '',
   const [formData, setFormData] = useState({
     valor: '', valor_administracion: '', estrato: '3', descripcion: '',
     numero_matricula: '', codigo_catastral: '',
@@ -85,6 +93,20 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
     try {
       setLoadingData(true)
       const response = await api.get(`/api/inmuebles/${propertyId}`)
+      const property = response.data
+
+      setFormDataComun({
+        valor: property.valor || '',
+        valor_administracion: (property.valor_administracion != null) ? String(property.valor_administracion) : '',
+        estrato: property.estrato ? property.estrato.toString() : 'no_aplica',
+        descripcion: property.descripcion || '',
+        numero_matricula: property.numero_matricula || '',
+        codigo_catastral: property.codigo_catastral || '',
+        tipo_operacion: property.tipo_operacion || 'venta',
+        tipo_inmueble: property.tipo_inmueble || 'casa',
+        estado_inmueble: property.estado_inmueble || 'nuevo',
+        zona: property.zona || 'urbano',
+        acepta_permuta: property.acepta_permuta || false
       const p = response.data
       setFormData({
         valor: p.valor || '', valor_administracion: p.valor_administracion || '',
@@ -116,6 +138,16 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
     return num ? `$ ${Number(num).toLocaleString('es-CO')}` : ''
   }
 
+  // Resetear acepta_permuta cuando tipo_operacion cambia a arriendo
+  useEffect(() => {
+    if (formDataComun.tipo_operacion === 'arriendo') {
+      setFormDataComun(prev => ({ ...prev, acepta_permuta: false }))
+    }
+  }, [formDataComun.tipo_operacion])
+
+  const handleCommonChange = (e) => {
+    const { name, value, type, checked } = e.target
+    setFormDataComun(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
   const handlePriceChange = (name, value) => {
     const num = value.replace(/\D/g, '')
     setFormData(prev => ({ ...prev, [name]: num }))
@@ -206,6 +238,35 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
     if (!validateStep(4)) return
     setSuccess('')
     setLoading(true)
+
+    // Validaciones
+    const valorErr = validators.valor(formDataComun.valor)
+    if (valorErr) { setError(valorErr); setLoading(false); return }
+
+    if (!ubicacion.municipio || ubicacion.municipio.trim().length < 3) {
+      setError('El municipio es requerido (mínimo 3 caracteres)'); setLoading(false); return
+    }
+    if (!ubicacion.barrio_vereda || ubicacion.barrio_vereda.trim().length < 3) {
+      setError('El barrio/vereda es requerido (mínimo 3 caracteres)'); setLoading(false); return
+    }
+    if (!ubicacion.direccion || ubicacion.direccion.trim().length < 8) {
+      setError('La dirección es requerida (mínimo 8 caracteres)'); setLoading(false); return
+    }
+
+    const descErr = validators.descripcion(formDataComun.descripcion)
+    if (descErr) { setError(descErr); setLoading(false); return }
+
+    // Validar campos requeridos de características
+    const camposActuales = camposPorTipo[formDataComun.tipo_inmueble] || []
+    const camposRequeridos = camposActuales.filter(c => c.required)
+    for (const campo of camposRequeridos) {
+      if (!caracteristicasEspecificas[campo.name] && caracteristicasEspecificas[campo.name] !== 0) {
+        setError(`Campo requerido: ${campo.label}`)
+        setLoading(false)
+        return
+      }
+    }
+
     try {
       const payload = buildInmueblePayload({ ...formData, acepta_permuta: false }, ubicacion, servicios, caract)
       if (editMode && propertyId) {
@@ -259,6 +320,37 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
     setTimeout(() => setToast(null), 4000)
   }
 
+  const camposActuales = camposPorTipo[formDataComun.tipo_inmueble] || []
+
+  const validateStep = () => {
+    switch (currentStep) {
+      case 1:
+        if (!formDataComun.tipo_inmueble || !formDataComun.tipo_operacion) {
+          setError('Selecciona tipo de inmueble y operación'); return false
+        }
+        break
+      case 2:
+        if (!formDataComun.valor || parseFloat(formDataComun.valor) <= 0) {
+          setError('Ingresa un precio válido'); return false
+        }
+        if (formDataComun.descripcion && formDataComun.descripcion.trim().length > 0 && formDataComun.descripcion.trim().length < 10) {
+          setError('La descripción debe tener al menos 10 caracteres'); return false
+        }
+        break
+      case 3:
+        if (!ubicacion.municipio || ubicacion.municipio.trim().length < 3) { setError('El municipio es requerido (mínimo 3 caracteres)'); return false }
+        if (!ubicacion.barrio_vereda || ubicacion.barrio_vereda.trim().length < 3) { setError('El barrio/vereda es requerido (mínimo 3 caracteres)'); return false }
+        if (!ubicacion.direccion || ubicacion.direccion.trim().length < 8) { setError('La dirección es requerida (mínimo 8 caracteres)'); return false }
+        if (!ubicacion.departamento) { setError('El país es requerido'); return false }
+        break
+      case 4:
+        const requeridos = camposActuales.filter(c => c.required)
+        for (const campo of requeridos) {
+          if (!caracteristicasEspecificas[campo.name] && caracteristicasEspecificas[campo.name] !== 0) {
+            setError(`Campo requerido: ${campo.label}`); return false
+          }
+        }
+        break
   const handleSaveDraftAndExit = async () => {
     try {
       const datos = { formData, ubicacion, servicios, caract, currentStep }
@@ -309,6 +401,293 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
 
         <Stepper currentStep={currentStep} />
 
+          {/* PASO 2: DETALLES */}
+          {currentStep === 2 && (
+            <div className="form-section step-content">
+              <h3>Detalles Básicos</h3>
+              <p className="text-sm text-slate-400 italic mb-4">Los campos con * son obligatorios</p>
+              <StepErrorBanner errorCount={stepErrorCount} />
+              <FieldWrapper
+                label="Precio (COP)"
+                name="valor"
+                required
+                error={getFieldState('valor').error}
+                touched={getFieldState('valor').touched}
+              >
+                <input
+                  type="text"
+                  id="valor"
+                  name="valor"
+                  placeholder="Ej: 250000000"
+                  value={currencyValor.displayValue}
+                  onChange={currencyValor.handleChange}
+                  onFocus={currencyValor.handleFocus}
+                  onBlur={() => { currencyValor.handleBlur(); validationHandleBlur('valor') }}
+                  disabled={loading}
+                  className={getInputClassName(getFieldState('valor').touched, getFieldState('valor').error)}
+                />
+              </FieldWrapper>
+              <div className="form-row">
+                <FieldWrapper
+                  label="Valor Administración (COP)"
+                  name="valor_administracion"
+                  required
+                  error={getFieldState('valor_administracion').error}
+                  touched={getFieldState('valor_administracion').touched}
+                >
+                  <input
+                    type="text"
+                    id="valor_administracion"
+                    name="valor_administracion"
+                    placeholder="Ej: 350000"
+                    value={currencyValorAdmin.displayValue}
+                    onChange={currencyValorAdmin.handleChange}
+                    onFocus={currencyValorAdmin.handleFocus}
+                    onBlur={() => { currencyValorAdmin.handleBlur(); validationHandleBlur('valor_administracion') }}
+                    disabled={loading}
+                    className={getInputClassName(getFieldState('valor_administracion').touched, getFieldState('valor_administracion').error)}
+                  />
+                </FieldWrapper>
+                <FieldWrapper
+                  label="Estrato"
+                  name="estrato"
+                  required
+                  error={getFieldState('estrato').error}
+                  touched={getFieldState('estrato').touched}
+                >
+                  <select
+                    id="estrato"
+                    name="estrato"
+                    value={formDataComun.estrato}
+                    onChange={handleCommonChange}
+                    onBlur={() => validationHandleBlur('estrato')}
+                    disabled={loading}
+                    className={getInputClassName(getFieldState('estrato').touched, getFieldState('estrato').error)}
+                  >
+                    <option value="" disabled>-- Seleccionar --</option>
+                    <option value="no_aplica">No aplica</option>
+                    {[1, 2, 3, 4, 5, 6].map(e => <option key={e} value={e}>{e}</option>)}
+                  </select>
+                </FieldWrapper>
+              </div>
+              <FieldWrapper
+                label="Título de la publicación"
+                name="descripcion"
+                required
+                error={getFieldState('descripcion').error}
+                touched={getFieldState('descripcion').touched}
+              >
+                <textarea
+                  id="descripcion"
+                  name="descripcion"
+                  placeholder="Escribe el titulo para la publicación de la propiedad (mínimo 10 caracteres)"
+                  value={formDataComun.descripcion}
+                  onChange={handleCommonChange}
+                  onBlur={() => validationHandleBlur('descripcion')}
+                  disabled={loading}
+                  rows="4"
+                  className={getInputClassName(getFieldState('descripcion').touched, getFieldState('descripcion').error)}
+                />
+              </FieldWrapper>
+              <div className="form-row">
+                <FieldWrapper
+                  label="Estado"
+                  name="estado_inmueble"
+                  required
+                  error={getFieldState('estado_inmueble').error}
+                  touched={getFieldState('estado_inmueble').touched}
+                >
+                  <select
+                    id="estado_inmueble"
+                    name="estado_inmueble"
+                    value={formDataComun.estado_inmueble}
+                    onChange={handleCommonChange}
+                    onBlur={() => validationHandleBlur('estado_inmueble')}
+                    disabled={loading}
+                    className={getInputClassName(getFieldState('estado_inmueble').touched, getFieldState('estado_inmueble').error)}
+                  >
+                    {ENUMS.estado_inmueble.map(e => (
+                      <option key={e} value={e}>{ENUM_LABELS.estado_inmueble[e]}</option>
+                    ))}
+                  </select>
+                </FieldWrapper>
+                <FieldWrapper
+                  label="Zona"
+                  name="zona"
+                  required
+                  error={getFieldState('zona').error}
+                  touched={getFieldState('zona').touched}
+                >
+                  <select
+                    id="zona"
+                    name="zona"
+                    value={formDataComun.zona}
+                    onChange={handleCommonChange}
+                    onBlur={() => validationHandleBlur('zona')}
+                    disabled={loading}
+                    className={getInputClassName(getFieldState('zona').touched, getFieldState('zona').error)}
+                  >
+                    {ENUMS.zona_tipo.map(z => (
+                      <option key={z} value={z}>{ENUM_LABELS.zona_tipo[z]}</option>
+                    ))}
+                  </select>
+                </FieldWrapper>
+              </div>
+              <div className="registral-section">
+                <div className="registral-section__header">
+                  <h4>Datos registrales del inmueble</h4>
+                  <span className="registral-section__help">
+                    Opcional. Recomendado para venta, no indispensable para arriendo.
+                  </span>
+                </div>
+                <div className="form-row">
+                  <FieldWrapper
+                    label="Número de matrícula inmobiliaria"
+                    name="numero_matricula"
+                    error={getFieldState('numero_matricula').error}
+                    touched={getFieldState('numero_matricula').touched}
+                  >
+                    <input
+                      type="text"
+                      id="numero_matricula"
+                      name="numero_matricula"
+                      placeholder="Ej: 050-123456"
+                      value={formDataComun.numero_matricula}
+                      onChange={handleCommonChange}
+                      onBlur={() => validationHandleBlur('numero_matricula')}
+                      disabled={loading}
+                      className={getInputClassName(getFieldState('numero_matricula').touched, getFieldState('numero_matricula').error)}
+                    />
+                  </FieldWrapper>
+                  <FieldWrapper
+                    label="Código catastral"
+                    name="codigo_catastral"
+                    error={getFieldState('codigo_catastral').error}
+                    touched={getFieldState('codigo_catastral').touched}
+                  >
+                    <input
+                      type="text"
+                      id="codigo_catastral"
+                      name="codigo_catastral"
+                      placeholder="Ej: 01-02-0003-0045-000"
+                      value={formDataComun.codigo_catastral}
+                      onChange={handleCommonChange}
+                      onBlur={() => validationHandleBlur('codigo_catastral')}
+                      disabled={loading}
+                      className={getInputClassName(getFieldState('codigo_catastral').touched, getFieldState('codigo_catastral').error)}
+                    />
+                  </FieldWrapper>
+                </div>
+              </div>
+
+              {formDataComun.tipo_operacion !== 'arriendo' && (
+                <div className="permuta-section">
+                  <label className="feature-checkbox permuta-checkbox">
+                    <input
+                      type="checkbox"
+                      name="acepta_permuta"
+                      checked={!!formDataComun.acepta_permuta}
+                      onChange={handleCommonChange}
+                      disabled={loading}
+                    />
+                    <div className="permuta-label-group">
+                      <span>¿Acepta permuta?</span>
+                      <small>Indica si considerarías un intercambio parcial o total del inmueble.</small>
+                    </div>
+                  </label>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* PASO 3: UBICACIÓN */}
+          {currentStep === 3 && (
+            <div className="form-section step-content">
+              <h3>Ubicación</h3>
+              <p className="text-sm text-slate-400 italic mb-4">Los campos con * son obligatorios</p>
+              <StepErrorBanner errorCount={stepErrorCount} />
+              <div className="form-row">
+                <FieldWrapper
+                  label="Municipio/Ciudad"
+                  name="municipio"
+                  required
+                  error={getFieldState('municipio').error}
+                  touched={getFieldState('municipio').touched}
+                >
+                  <input
+                    type="text"
+                    id="municipio"
+                    name="municipio"
+                    placeholder="Ej: Medellín, Pasto, Cali"
+                    value={ubicacion.municipio}
+                    onChange={handleUbicacionChange}
+                    onBlur={() => validationHandleBlur('municipio')}
+                    disabled={loading}
+                    required
+                    className={getInputClassName(getFieldState('municipio').touched, getFieldState('municipio').error)}
+                  />
+                </FieldWrapper>
+                <FieldWrapper
+                  label="País"
+                  name="departamento"
+                  required
+                  error={getFieldState('departamento').error}
+                  touched={getFieldState('departamento').touched}
+                >
+                  <CountryAutocomplete
+                    id="departamento"
+                    name="departamento"
+                    value={ubicacion.departamento}
+                    onChange={(country) => setUbicacion(prev => ({ ...prev, departamento: country }))}
+                    onBlur={() => validationHandleBlur('departamento')}
+                    disabled={loading}
+                    touched={getFieldState('departamento').touched}
+                    error={getFieldState('departamento').error}
+                  />
+                </FieldWrapper>
+              </div>
+              <div className="form-row">
+                <FieldWrapper
+                  label="Barrio/Vereda"
+                  name="barrio_vereda"
+                  required
+                  error={getFieldState('barrio_vereda').error}
+                  touched={getFieldState('barrio_vereda').touched}
+                >
+                  <input
+                    type="text"
+                    id="barrio_vereda"
+                    name="barrio_vereda"
+                    placeholder="Ej: El Poblado, Ciudad 2000, Sector 3"
+                    value={ubicacion.barrio_vereda}
+                    onChange={handleUbicacionChange}
+                    onBlur={() => validationHandleBlur('barrio_vereda')}
+                    disabled={loading}
+                    required
+                    className={getInputClassName(getFieldState('barrio_vereda').touched, getFieldState('barrio_vereda').error)}
+                  />
+                </FieldWrapper>
+                <FieldWrapper
+                  label="Dirección"
+                  name="direccion"
+                  required
+                  error={getFieldState('direccion').error}
+                  touched={getFieldState('direccion').touched}
+                >
+                  <input
+                    type="text"
+                    id="direccion"
+                    name="direccion"
+                    placeholder="Ej: Calle 18 # 24-56, Cra 32A No. 15-40"
+                    value={ubicacion.direccion}
+                    onChange={handleUbicacionChange}
+                    onBlur={() => validationHandleBlur('direccion')}
+                    disabled={loading}
+                    required
+                    className={getInputClassName(getFieldState('direccion').touched, getFieldState('direccion').error)}
+                  />
+                </FieldWrapper>
+              </div>
         <form onSubmit={handleSubmit} className="publish-form" noValidate ref={formRef}>
           {success && <div className="success-message">{success}</div>}
           {errors.general && <div className="field__error" style={{marginBottom:12}}><AlertCircle size={12} /> {errors.general}</div>}

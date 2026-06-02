@@ -27,10 +27,10 @@ describe('useCurrencyFormat - Property 6: Currency format round-trip', () => {
     )
   })
 
-  it('returns empty string for zero or empty values (placeholder behavior)', () => {
+  it('returns empty string for truly empty values (placeholder behavior)', () => {
     fc.assert(
       fc.property(
-        fc.constantFrom(0, '', null, undefined, '0'),
+        fc.constantFrom('', null, undefined),
         (value) => {
           const formatted = formatCOP(value)
           expect(formatted).toBe('')
@@ -38,5 +38,15 @@ describe('useCurrencyFormat - Property 6: Currency format round-trip', () => {
       ),
       { numRuns: 100 }
     )
+  })
+
+  it('formats zero as a valid currency string', () => {
+    const formatted = formatCOP(0)
+    expect(formatted).not.toBe('')
+    expect(Number(parseCurrencyInput(formatted))).toBe(0)
+
+    const formattedStr = formatCOP('0')
+    expect(formattedStr).not.toBe('')
+    expect(Number(parseCurrencyInput(formattedStr))).toBe(0)
   })
 })
