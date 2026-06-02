@@ -79,7 +79,6 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
     if (!editMode) setCaract({})
   }, [formData.tipo_inmueble, editMode])
 
-  // Resetear acepta_permuta cuando tipo_operacion cambia a arriendo
   useEffect(() => {
     if (formData.tipo_operacion === 'arriendo') {
       setFormData(prev => ({ ...prev, acepta_permuta: false }))
@@ -249,9 +248,7 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
       const titulo = formData.tipo_inmueble ? `${formData.tipo_inmueble} - ${ubicacion.municipio || 'Sin ubicación'}` : null
       const response = await api.post('/api/borradores', { datos, paso_actual: currentStep, titulo })
       localStorage.setItem('property_draft', JSON.stringify({ ...datos, savedAt: new Date().toISOString() }))
-      const msg = response.status === 201
-        ? 'Borrador guardado correctamente'
-        : 'Borrador anterior reemplazado con los datos actuales'
+      const msg = response.status === 201 ? 'Borrador guardado correctamente' : 'Borrador anterior reemplazado con los datos actuales'
       setToast({ type: 'success', message: msg })
     } catch (err) {
       const codigo = err.response?.data?.codigo
@@ -275,9 +272,8 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
       await api.post('/api/borradores', { datos, paso_actual: currentStep, titulo })
     } catch (err) {
       const codigo = err.response?.data?.codigo
-      if (codigo === 'BORRADOR_DUPLICADO') {
-        // Ya existe, no hacer nada extra
-      } else if (codigo === 'LIMITE_ALCANZADO') {
+      if (codigo === 'BORRADOR_DUPLICADO') { /* Ya existe */ }
+      else if (codigo === 'LIMITE_ALCANZADO') {
         setToast({ type: 'error', message: err.response.data.error })
         setShowCancelModal(false)
         setTimeout(() => setToast(null), 4000)
@@ -376,15 +372,9 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
             <h3 className="cancel-modal__title">¿Cancelar publicación?</h3>
             <p className="cancel-modal__desc">Si cancelas ahora perderás todo el progreso no guardado. Puedes guardar un borrador antes de salir para continuar más tarde.</p>
             <div className="cancel-modal__actions">
-              <button className="cancel-modal__btn-draft" onClick={handleSaveDraftAndExit}>
-                <Save size={12} /> Guardar borrador y salir
-              </button>
-              <button className="cancel-modal__btn-exit" onClick={handleExitWithoutSaving}>
-                <X size={12} /> Salir sin guardar
-              </button>
-              <button className="cancel-modal__btn-continue" onClick={() => setShowCancelModal(false)}>
-                Continuar editando
-              </button>
+              <button className="cancel-modal__btn-draft" onClick={handleSaveDraftAndExit}><Save size={12} /> Guardar borrador y salir</button>
+              <button className="cancel-modal__btn-exit" onClick={handleExitWithoutSaving}><X size={12} /> Salir sin guardar</button>
+              <button className="cancel-modal__btn-continue" onClick={() => setShowCancelModal(false)}>Continuar editando</button>
             </div>
           </div>
         </div>
@@ -405,52 +395,40 @@ function Stepper({ currentStep }) {
     { num: 4, label: 'Características' }
   ]
   const getState = (num) => num < currentStep ? 'completed' : num === currentStep ? 'active' : 'pending'
-
   return (
     <div className="stepper">
       <div className="stepper__steps">
         {steps.map((step, i) => (
           <React.Fragment key={step.num}>
             <div className={`stepper__step stepper__step--${getState(step.num)}`}>
-              <div className="stepper__circle">
-                {getState(step.num) === 'completed' ? <CheckCircle size={14} /> : step.num}
-              </div>
+              <div className="stepper__circle">{getState(step.num) === 'completed' ? <CheckCircle size={14} /> : step.num}</div>
               <span className="stepper__label">{step.label}</span>
             </div>
-            {i < steps.length - 1 && (
-              <div className={`stepper__line ${currentStep > step.num ? 'stepper__line--completed' : ''}`} />
-            )}
+            {i < steps.length - 1 && <div className={`stepper__line ${currentStep > step.num ? 'stepper__line--completed' : ''}`} />}
           </React.Fragment>
         ))}
       </div>
-      <div className="stepper__progress">
-        <div className="stepper__progress-fill" style={{ width: `${(currentStep / 4) * 100}%` }} />
-      </div>
+      <div className="stepper__progress"><div className="stepper__progress-fill" style={{ width: `${(currentStep / 4) * 100}%` }} /></div>
     </div>
   )
 }
 
-/* --- STEP 1: TIPO --- */
+/* --- STEP 1 --- */
 function Step1({ formData, onChange, errors, loading }) {
   return (
     <div className="step-content">
       <div className="form-card">
-        <div className="form-card__header">
-          <span className="form-card__icon"><Home size={16} /></span>
-          <h3 className="form-card__title">Tipo de inmueble y operación</h3>
-        </div>
+        <div className="form-card__header"><span className="form-card__icon"><Home size={16} /></span><h3 className="form-card__title">Tipo de inmueble y operación</h3></div>
         <div className="field">
           <label className="field__label">Tipo de inmueble <span className="field__required">*</span></label>
-          <select className={`field__select ${errors.tipo_inmueble ? 'field__select--error' : ''}`}
-            value={formData.tipo_inmueble} onChange={(e) => onChange('tipo_inmueble', e.target.value)} disabled={loading}>
+          <select className={`field__select ${errors.tipo_inmueble ? 'field__select--error' : ''}`} value={formData.tipo_inmueble} onChange={(e) => onChange('tipo_inmueble', e.target.value)} disabled={loading}>
             {ENUMS.tipo_inmueble.map(t => <option key={t} value={t}>{ENUM_LABELS.tipo_inmueble[t]}</option>)}
           </select>
           {errors.tipo_inmueble && <span className="field__error"><AlertCircle size={11} /> {errors.tipo_inmueble}</span>}
         </div>
         <div className="field">
           <label className="field__label">Tipo de operación <span className="field__required">*</span></label>
-          <select className={`field__select ${errors.tipo_operacion ? 'field__select--error' : ''}`}
-            value={formData.tipo_operacion} onChange={(e) => onChange('tipo_operacion', e.target.value)} disabled={loading}>
+          <select className={`field__select ${errors.tipo_operacion ? 'field__select--error' : ''}`} value={formData.tipo_operacion} onChange={(e) => onChange('tipo_operacion', e.target.value)} disabled={loading}>
             {ENUMS.tipo_operacion.map(t => <option key={t} value={t}>{ENUM_LABELS.tipo_operacion[t]}</option>)}
           </select>
           {errors.tipo_operacion && <span className="field__error"><AlertCircle size={11} /> {errors.tipo_operacion}</span>}
@@ -460,28 +438,21 @@ function Step1({ formData, onChange, errors, loading }) {
   )
 }
 
-/* --- STEP 2: DETALLES --- */
+/* --- STEP 2 --- */
 function Step2({ formData, onChange, onPriceChange, onCheckboxChange, formatPrice, errors, loading }) {
   return (
     <div className="step-content">
       <div className="form-card">
-        <div className="form-card__header">
-          <span className="form-card__icon"><DollarSign size={16} /></span>
-          <h3 className="form-card__title">Detalles básicos</h3>
-        </div>
+        <div className="form-card__header"><span className="form-card__icon"><DollarSign size={16} /></span><h3 className="form-card__title">Detalles básicos</h3></div>
         <div className="field">
           <label className="field__label">Precio (COP) <span className="field__required">*</span></label>
-          <input className={`field__input ${errors.valor ? 'field__input--error' : ''}`}
-            type="text" placeholder="$ 0" value={formatPrice(formData.valor)}
-            onChange={(e) => onPriceChange('valor', e.target.value)} disabled={loading} />
+          <input className={`field__input ${errors.valor ? 'field__input--error' : ''}`} type="text" placeholder="$ 0" value={formatPrice(formData.valor)} onChange={(e) => onPriceChange('valor', e.target.value)} disabled={loading} />
           {errors.valor && <span className="field__error"><AlertCircle size={11} /> {errors.valor}</span>}
         </div>
         <div className="form-row">
           <div className="field">
             <label className="field__label">Administración (COP)</label>
-            <input className="field__input" type="text" placeholder="$ 0"
-              value={formatPrice(formData.valor_administracion)}
-              onChange={(e) => onPriceChange('valor_administracion', e.target.value)} disabled={loading} />
+            <input className="field__input" type="text" placeholder="$ 0" value={formatPrice(formData.valor_administracion)} onChange={(e) => onPriceChange('valor_administracion', e.target.value)} disabled={loading} />
           </div>
           <div className="field">
             <label className="field__label">Estrato</label>
@@ -493,9 +464,7 @@ function Step2({ formData, onChange, onPriceChange, onCheckboxChange, formatPric
         </div>
         <div className="field">
           <label className="field__label">Descripción / Título</label>
-          <textarea className={`field__textarea ${errors.descripcion ? 'field__input--error' : ''}`}
-            placeholder="Describe la propiedad (mínimo 10 caracteres)..." value={formData.descripcion}
-            onChange={(e) => onChange('descripcion', e.target.value)} disabled={loading} rows={3} />
+          <textarea className={`field__textarea ${errors.descripcion ? 'field__input--error' : ''}`} placeholder="Describe la propiedad (mínimo 10 caracteres)..." value={formData.descripcion} onChange={(e) => onChange('descripcion', e.target.value)} disabled={loading} rows={3} />
           {errors.descripcion && <span className="field__error"><AlertCircle size={11} /> {errors.descripcion}</span>}
         </div>
         <div className="form-row">
@@ -515,28 +484,19 @@ function Step2({ formData, onChange, onPriceChange, onCheckboxChange, formatPric
         <div className="form-row">
           <div className="field">
             <label className="field__label">Matrícula ORIP <span className="field__optional">(Opcional)</span></label>
-            <input className="field__input" type="text" placeholder="Número de registro"
-              value={formData.numero_matricula} onChange={(e) => onChange('numero_matricula', e.target.value)} disabled={loading} />
+            <input className="field__input" type="text" placeholder="Número de registro" value={formData.numero_matricula} onChange={(e) => onChange('numero_matricula', e.target.value)} disabled={loading} />
             <span className="field__hint">Registro en la Oficina de Instrumentos Públicos</span>
           </div>
           <div className="field">
             <label className="field__label">Código catastral <span className="field__optional">(Opcional)</span></label>
-            <input className="field__input" type="text" placeholder="Ficha predial"
-              value={formData.codigo_catastral} onChange={(e) => onChange('codigo_catastral', e.target.value)} disabled={loading} />
+            <input className="field__input" type="text" placeholder="Ficha predial" value={formData.codigo_catastral} onChange={(e) => onChange('codigo_catastral', e.target.value)} disabled={loading} />
             <span className="field__hint">Ficha predial asignada por el IGAC</span>
           </div>
         </div>
-
         {formData.tipo_operacion !== 'arriendo' && (
           <div className="permuta-section">
             <label className="permuta-checkbox">
-              <input
-                type="checkbox"
-                name="acepta_permuta"
-                checked={!!formData.acepta_permuta}
-                onChange={(e) => onCheckboxChange('acepta_permuta', e.target.checked)}
-                disabled={loading}
-              />
+              <input type="checkbox" name="acepta_permuta" checked={!!formData.acepta_permuta} onChange={(e) => onCheckboxChange('acepta_permuta', e.target.checked)} disabled={loading} />
               <div className="permuta-label-group">
                 <span>¿Acepta permuta?</span>
                 <small>Indica si considerarías un intercambio parcial o total del inmueble.</small>
@@ -549,21 +509,17 @@ function Step2({ formData, onChange, onPriceChange, onCheckboxChange, formatPric
   )
 }
 
-/* --- STEP 3: UBICACION --- */
+/* --- STEP 3 --- */
 function Step3({ ubicacion, onUbicacionChange, servicios, onToggleServicio, errors, loading }) {
   const municipios = getMunicipios(ubicacion.departamento)
   return (
     <div className="step-content">
       <div className="form-card">
-        <div className="form-card__header">
-          <span className="form-card__icon"><MapPin size={16} /></span>
-          <h3 className="form-card__title">Ubicación</h3>
-        </div>
+        <div className="form-card__header"><span className="form-card__icon"><MapPin size={16} /></span><h3 className="form-card__title">Ubicación</h3></div>
         <div className="form-row">
           <div className="field">
             <label className="field__label">Departamento <span className="field__required">*</span></label>
-            <select className={`field__select ${errors.departamento ? 'field__select--error' : ''}`}
-              value={ubicacion.departamento} onChange={(e) => onUbicacionChange('departamento', e.target.value)} disabled={loading}>
+            <select className={`field__select ${errors.departamento ? 'field__select--error' : ''}`} value={ubicacion.departamento} onChange={(e) => onUbicacionChange('departamento', e.target.value)} disabled={loading}>
               <option value="">Seleccionar...</option>
               {DEPARTAMENTOS.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
@@ -571,9 +527,7 @@ function Step3({ ubicacion, onUbicacionChange, servicios, onToggleServicio, erro
           </div>
           <div className="field">
             <label className="field__label">Municipio / Ciudad <span className="field__required">*</span></label>
-            <select className={`field__select ${errors.municipio ? 'field__select--error' : ''}`}
-              value={ubicacion.municipio} onChange={(e) => onUbicacionChange('municipio', e.target.value)}
-              disabled={loading || !ubicacion.departamento}>
+            <select className={`field__select ${errors.municipio ? 'field__select--error' : ''}`} value={ubicacion.municipio} onChange={(e) => onUbicacionChange('municipio', e.target.value)} disabled={loading || !ubicacion.departamento}>
               <option value="">Seleccionar...</option>
               {municipios.map(m => <option key={m} value={m}>{m}</option>)}
             </select>
@@ -583,23 +537,18 @@ function Step3({ ubicacion, onUbicacionChange, servicios, onToggleServicio, erro
         <div className="form-row">
           <div className="field">
             <label className="field__label">Barrio / Vereda <span className="field__required">*</span></label>
-            <input className={`field__input ${errors.barrio_vereda ? 'field__input--error' : ''}`} type="text" placeholder="Ej: El Poblado"
-              value={ubicacion.barrio_vereda} onChange={(e) => onUbicacionChange('barrio_vereda', e.target.value)} disabled={loading} />
+            <input className={`field__input ${errors.barrio_vereda ? 'field__input--error' : ''}`} type="text" placeholder="Ej: El Poblado" value={ubicacion.barrio_vereda} onChange={(e) => onUbicacionChange('barrio_vereda', e.target.value)} disabled={loading} />
             {errors.barrio_vereda && <span className="field__error"><AlertCircle size={11} /> {errors.barrio_vereda}</span>}
           </div>
           <div className="field">
             <label className="field__label">Dirección <span className="field__required">*</span></label>
-            <input className={`field__input ${errors.direccion ? 'field__input--error' : ''}`} type="text" placeholder="Ej: Calle 123 #45-67"
-              value={ubicacion.direccion} onChange={(e) => onUbicacionChange('direccion', e.target.value)} disabled={loading} />
+            <input className={`field__input ${errors.direccion ? 'field__input--error' : ''}`} type="text" placeholder="Ej: Calle 123 #45-67" value={ubicacion.direccion} onChange={(e) => onUbicacionChange('direccion', e.target.value)} disabled={loading} />
             {errors.direccion && <span className="field__error"><AlertCircle size={11} /> {errors.direccion}</span>}
           </div>
         </div>
       </div>
       <div className="form-card">
-        <div className="form-card__header">
-          <span className="form-card__icon"><Zap size={16} /></span>
-          <h3 className="form-card__title">Servicios públicos</h3>
-        </div>
+        <div className="form-card__header"><span className="form-card__icon"><Zap size={16} /></span><h3 className="form-card__title">Servicios públicos</h3></div>
         <div className="services-grid">
           {Object.entries(servicios).map(([key, val]) => (
             <div key={key} className={`service-chip ${val ? 'service-chip--active' : ''}`} onClick={() => onToggleServicio(key)}>
@@ -613,7 +562,7 @@ function Step3({ ubicacion, onUbicacionChange, servicios, onToggleServicio, erro
   )
 }
 
-/* --- STEP 4: CARACTERISTICAS --- */
+/* --- STEP 4 --- */
 function Step4({ tipo, caract, onCaractChange, onToggle, onIncrement, onDecrement, calcAreaLote, errors }) {
   switch (tipo) {
     case 'casa': return <CasaForm caract={caract} onChange={onCaractChange} onToggle={onToggle} onInc={onIncrement} onDec={onDecrement} calcArea={calcAreaLote} errors={errors} />
@@ -627,7 +576,7 @@ function Step4({ tipo, caract, onCaractChange, onToggle, onIncrement, onDecremen
   }
 }
 
-/* --- SHARED COMPONENTS --- */
+/* --- SHARED --- */
 function Counter({ label, value, onInc, onDec, min = 0, max = 20, required }) {
   const val = parseInt(value) || 0
   return (
@@ -651,29 +600,20 @@ function DimensionCalc({ caract, onChange, calcArea, showAreaConstruida = true, 
       <div className="form-row">
         <div className="field">
           <label className="field__label">Frente (m)</label>
-          <input className={`field__input ${errors?.frente ? 'field__input--error' : ''}`} type="number" step="0.1" min="0"
-            placeholder="0.0" value={caract.frente || ''} onChange={(e) => onChange('frente', e.target.value)} />
+          <input className={`field__input ${errors?.frente ? 'field__input--error' : ''}`} type="number" step="0.1" min="0" placeholder="0.0" value={caract.frente || ''} onChange={(e) => onChange('frente', e.target.value)} />
           {errors?.frente && <span className="field__error"><AlertCircle size={11} /> {errors.frente}</span>}
         </div>
         <div className="field">
           <label className="field__label">Fondo (m)</label>
-          <input className={`field__input ${errors?.fondo ? 'field__input--error' : ''}`} type="number" step="0.1" min="0"
-            placeholder="0.0" value={caract.fondo || ''} onChange={(e) => onChange('fondo', e.target.value)} />
+          <input className={`field__input ${errors?.fondo ? 'field__input--error' : ''}`} type="number" step="0.1" min="0" placeholder="0.0" value={caract.fondo || ''} onChange={(e) => onChange('fondo', e.target.value)} />
           {errors?.fondo && <span className="field__error"><AlertCircle size={11} /> {errors.fondo}</span>}
         </div>
       </div>
-      {areaLote && (
-        <div className="calc-display">
-          <div className="calc-display__value">{areaLote} m²</div>
-          <div className="calc-display__label">Área lote - Calculado automáticamente</div>
-        </div>
-      )}
+      {areaLote && <div className="calc-display"><div className="calc-display__value">{areaLote} m²</div><div className="calc-display__label">Área lote calculada</div></div>}
       {showAreaConstruida && (
         <div className="field">
           <label className="field__label">Área construida (m²)</label>
-          <input className="field__input" type="number" step="0.01" min="0" placeholder="0"
-            value={caract.area_construida || ''} onChange={(e) => onChange('area_construida', e.target.value)} />
-          <span className="field__hint">Puede ser menor o igual al área lote</span>
+          <input className="field__input" type="number" step="0.01" min="0" placeholder="0" value={caract.area_construida || ''} onChange={(e) => onChange('area_construida', e.target.value)} />
           {showWarning && <span className="field__warning"><AlertCircle size={11} /> Área construida supera el área del lote</span>}
         </div>
       )}
@@ -694,360 +634,15 @@ function ChipsGrid({ items, caract, onToggle }) {
   )
 }
 
-
-/* --- PROPERTY TYPE FORMS --- */
-
 const AMENIDADES_CASA = [
-  { key: 'patio', label: 'Patio' },
-  { key: 'jardin', label: 'Jardín' },
-  { key: 'antejardin', label: 'Antejardín' },
-  { key: 'terraza', label: 'Terraza' },
-  { key: 'balcon', label: 'Balcón' },
-  { key: 'zona_lavanderia', label: 'Zona lavandería' },
-  { key: 'cocina_equipada', label: 'Cocina equipada' },
-  { key: 'cuarto_servicio', label: 'Cuarto de servicio' },
-  { key: 'bano_servicio', label: 'Baño de servicio' },
-  { key: 'chimenea', label: 'Chimenea' },
-  { key: 'deposito', label: 'Depósito' }
+  { key: 'patio', label: 'Patio' }, { key: 'jardin', label: 'Jardín' }, { key: 'antejardin', label: 'Antejardín' },
+  { key: 'terraza', label: 'Terraza' }, { key: 'balcon', label: 'Balcón' }, { key: 'zona_lavanderia', label: 'Zona lavandería' },
+  { key: 'cocina_equipada', label: 'Cocina equipada' }, { key: 'cuarto_servicio', label: 'Cuarto de servicio' },
+  { key: 'bano_servicio', label: 'Baño de servicio' }, { key: 'chimenea', label: 'Chimenea' }, { key: 'deposito', label: 'Depósito' }
 ]
-
 const AMENIDADES_APTO = [
-  { key: 'balcon', label: 'Balcón' },
-  { key: 'terraza', label: 'Terraza' },
-  { key: 'zona_lavanderia', label: 'Zona lavandería' },
-  { key: 'cocina_equipada', label: 'Cocina equipada' },
-  { key: 'cuarto_servicio', label: 'Cuarto de servicio' },
-  { key: 'bano_servicio', label: 'Baño de servicio' },
-  { key: 'deposito', label: 'Depósito' },
-  { key: 'gimnasio', label: 'Gimnasio' },
-  { key: 'piscina', label: 'Piscina' }
+  { key: 'balcon', label: 'Balcón' }, { key: 'terraza', label: 'Terraza' }, { key: 'zona_lavanderia', label: 'Zona lavandería' },
+  { key: 'cocina_equipada', label: 'Cocina equipada' }, { key: 'cuarto_servicio', label: 'Cuarto de servicio' },
+  { key: 'bano_servicio', label: 'Baño de servicio' }, { key: 'deposito', label: 'Depósito' },
+  { key: 'gimnasio', label: 'Gimnasio' }, { key: 'piscina', label: 'Piscina' }
 ]
-
-function CasaForm({ caract, onChange, onToggle, onInc, onDec, calcArea, errors }) {
-  return (
-    <div className="step-content">
-      <div className="form-card">
-        <div className="form-card__header">
-          <span className="form-card__icon"><Ruler size={16} /></span>
-          <h3 className="form-card__title">Dimensiones y área</h3>
-        </div>
-        <DimensionCalc caract={caract} onChange={onChange} calcArea={calcArea} errors={errors} />
-        <div className="form-row">
-          <div className="field">
-            <label className="field__label">Año de construcción</label>
-            <input className={`field__input ${errors?.ano_construccion ? 'field__input--error' : ''}`} type="number" min="1900" max={CURRENT_YEAR}
-              placeholder="Ej: 2015" value={caract.ano_construccion || ''} onChange={(e) => onChange('ano_construccion', e.target.value)} />
-            {errors?.ano_construccion && <span className="field__error"><AlertCircle size={11} /> {errors.ano_construccion}</span>}
-          </div>
-          <div className="field">
-            <label className="field__label">Cantidad de dueños</label>
-            <input className="field__input" type="number" min="1" placeholder="1"
-              value={caract.cantidad_duenos || ''} onChange={(e) => onChange('cantidad_duenos', e.target.value)} />
-          </div>
-        </div>
-        <Counter label="Número de pisos" value={caract.pisos} onInc={() => onInc('pisos', 50)} onDec={() => onDec('pisos', 1)} min={1} max={50} />
-      </div>
-
-      <div className="form-card">
-        <div className="form-card__header">
-          <span className="form-card__icon"><DoorOpen size={16} /></span>
-          <h3 className="form-card__title">Espacios</h3>
-        </div>
-        <div className="counters-grid">
-          <Counter label="Habitaciones" value={caract.habitaciones} onInc={() => onInc('habitaciones')} onDec={() => onDec('habitaciones')} required errors={errors} />
-          <Counter label="Baños" value={caract.banos} onInc={() => onInc('banos')} onDec={() => onDec('banos')} required errors={errors} />
-          <Counter label="Parqueaderos" value={caract.parqueaderos} onInc={() => onInc('parqueaderos', 10)} onDec={() => onDec('parqueaderos')} />
-        </div>
-      </div>
-
-      <div className="form-card">
-        <div className="form-card__header">
-          <span className="form-card__icon"><Star size={16} /></span>
-          <h3 className="form-card__title">Amenidades</h3>
-        </div>
-        <ChipsGrid items={AMENIDADES_CASA} caract={caract} onToggle={onToggle} />
-      </div>
-
-      <div className="form-card">
-        <div className="form-card__header">
-          <span className="form-card__icon"><ClipboardList size={16} /></span>
-          <h3 className="form-card__title">Características adicionales</h3>
-        </div>
-        <div className="form-row">
-          <div className="field">
-            <label className="field__label">Sala / Comedor</label>
-            <select className="field__select" value={caract.sala_comedor || ''} onChange={(e) => onChange('sala_comedor', e.target.value || null)}>
-              <option value="">No aplica</option>
-              <option value="sala">Sala</option>
-              <option value="comedor">Comedor</option>
-              <option value="sala_comedor">Sala-Comedor</option>
-              <option value="separados">Separados</option>
-            </select>
-          </div>
-          <div className="field">
-            <label className="field__label">Tipo de cocina</label>
-            <select className="field__select" value={caract.tipo_cocina || ''} onChange={(e) => onChange('tipo_cocina', e.target.value || null)}>
-              <option value="">No aplica</option>
-              <option value="integral">Integral</option>
-              <option value="semi_integral">Semi-integral</option>
-              <option value="sencilla">Sencilla</option>
-            </select>
-          </div>
-        </div>
-        <div className="form-row">
-          <div className="field">
-            <label className="field__label">Zona lavandería</label>
-            <select className="field__select" value={caract.zona_lavanderia_tipo || ''} onChange={(e) => { onChange('zona_lavanderia_tipo', e.target.value || null); if (e.target.value) onToggle('zona_lavanderia') }}>
-              <option value="">No tiene</option>
-              <option value="interna">Interna</option>
-              <option value="externa">Externa</option>
-            </select>
-          </div>
-          <div className="field">
-            <label className="field__label">Tipo parqueadero</label>
-            <select className="field__select" value={caract.tipo_parqueadero || ''} onChange={(e) => onChange('tipo_parqueadero', e.target.value || null)}>
-              <option value="">Ninguno</option>
-              <option value="interno">Interno</option>
-              <option value="externo">Externo</option>
-              <option value="cubierto">Cubierto</option>
-              <option value="descubierto">Descubierto</option>
-            </select>
-          </div>
-        </div>
-        <div className="field">
-          <label className="field__label">Descripción de acabados</label>
-          <textarea className="field__textarea" rows={3} placeholder="Pisos en porcelanato, cocina en granito..."
-            value={caract.descripcion_acabados || ''} onChange={(e) => onChange('descripcion_acabados', e.target.value)} />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function ApartamentoForm({ caract, onChange, onToggle, onInc, onDec, calcArea, errors }) {
-  return (
-    <div className="step-content">
-      <div className="form-card">
-        <div className="form-card__header">
-          <span className="form-card__icon"><Ruler size={16} /></span>
-          <h3 className="form-card__title">Dimensiones y área</h3>
-        </div>
-        <DimensionCalc caract={caract} onChange={onChange} calcArea={calcArea} errors={errors} />
-        <div className="form-row">
-          <div className="field">
-            <label className="field__label">Piso del apartamento</label>
-            <input className="field__input" type="number" min="1" placeholder="Ej: 5"
-              value={caract.piso || ''} onChange={(e) => onChange('piso', e.target.value)} />
-          </div>
-          <div className="field">
-            <label className="field__label">Año de construcción</label>
-            <input className={`field__input ${errors?.ano_construccion ? 'field__input--error' : ''}`} type="number" min="1900" max={CURRENT_YEAR}
-              placeholder="Ej: 2018" value={caract.ano_construccion || ''} onChange={(e) => onChange('ano_construccion', e.target.value)} />
-            {errors?.ano_construccion && <span className="field__error"><AlertCircle size={11} /> {errors.ano_construccion}</span>}
-          </div>
-        </div>
-      </div>
-
-      <div className="form-card">
-        <div className="form-card__header">
-          <span className="form-card__icon"><DoorOpen size={16} /></span>
-          <h3 className="form-card__title">Espacios</h3>
-        </div>
-        <div className="counters-grid">
-          <Counter label="Habitaciones" value={caract.habitaciones} onInc={() => onInc('habitaciones')} onDec={() => onDec('habitaciones')} required />
-          <Counter label="Baños" value={caract.banos} onInc={() => onInc('banos')} onDec={() => onDec('banos')} required />
-          <Counter label="Parqueaderos" value={caract.parqueaderos} onInc={() => onInc('parqueaderos', 10)} onDec={() => onDec('parqueaderos')} />
-        </div>
-      </div>
-
-      <div className="form-card">
-        <div className="form-card__header">
-          <span className="form-card__icon"><Star size={16} /></span>
-          <h3 className="form-card__title">Amenidades</h3>
-        </div>
-        <ChipsGrid items={AMENIDADES_APTO} caract={caract} onToggle={onToggle} />
-      </div>
-    </div>
-  )
-}
-
-function ApartaestudioForm({ caract, onChange, onToggle, calcArea, errors }) {
-  return (
-    <div className="step-content">
-      <div className="form-card">
-        <div className="form-card__header">
-          <span className="form-card__icon"><Ruler size={16} /></span>
-          <h3 className="form-card__title">Dimensiones y área</h3>
-        </div>
-        <DimensionCalc caract={caract} onChange={onChange} calcArea={calcArea} showAreaConstruida={true} errors={errors} />
-        <div className="field">
-          <label className="field__label">Área total (m²) <span className="field__required">*</span></label>
-          <input className={`field__input ${errors?.area_total ? 'field__input--error' : ''}`} type="number" step="0.01" min="0"
-            placeholder="0" value={caract.area_total || ''} onChange={(e) => onChange('area_total', e.target.value)} />
-          {errors?.area_total && <span className="field__error"><AlertCircle size={11} /> {errors.area_total}</span>}
-        </div>
-        <div className="field">
-          <label className="field__label">Piso</label>
-          <input className="field__input" type="number" min="1" placeholder="Ej: 3"
-            value={caract.piso || ''} onChange={(e) => onChange('piso', e.target.value)} />
-        </div>
-      </div>
-
-      <div className="form-card">
-        <div className="form-card__header">
-          <span className="form-card__icon"><Star size={16} /></span>
-          <h3 className="form-card__title">Amenidades</h3>
-        </div>
-        <ChipsGrid items={[
-          { key: 'balcon', label: 'Balcón' },
-          { key: 'zona_lavanderia', label: 'Zona lavandería' },
-          { key: 'cocina_equipada', label: 'Cocina equipada' },
-          { key: 'deposito', label: 'Depósito' }
-        ]} caract={caract} onToggle={onToggle} />
-      </div>
-    </div>
-  )
-}
-
-function LocalForm({ caract, onChange, onToggle, calcArea, errors }) {
-  return (
-    <div className="step-content">
-      <div className="form-card">
-        <div className="form-card__header">
-          <span className="form-card__icon"><Ruler size={16} /></span>
-          <h3 className="form-card__title">Dimensiones y área</h3>
-        </div>
-        <DimensionCalc caract={caract} onChange={onChange} calcArea={calcArea} errors={errors} />
-        <div className="field">
-          <label className="field__label">Área total (m²) <span className="field__required">*</span></label>
-          <input className={`field__input ${errors?.area_total ? 'field__input--error' : ''}`} type="number" step="0.01" min="0"
-            placeholder="0" value={caract.area_total || ''} onChange={(e) => onChange('area_total', e.target.value)} />
-          {errors?.area_total && <span className="field__error"><AlertCircle size={11} /> {errors.area_total}</span>}
-        </div>
-      </div>
-
-      <div className="form-card">
-        <div className="form-card__header">
-          <span className="form-card__icon"><Star size={16} /></span>
-          <h3 className="form-card__title">Características</h3>
-        </div>
-        <ChipsGrid items={[
-          { key: 'bano_privado', label: 'Baño privado' },
-          { key: 'mezanine', label: 'Mezanine' },
-          { key: 'vitrina', label: 'Vitrina' },
-          { key: 'deposito', label: 'Depósito' },
-          { key: 'parqueadero', label: 'Parqueadero' }
-        ]} caract={caract} onToggle={onToggle} />
-      </div>
-    </div>
-  )
-}
-
-function BodegaForm({ caract, onChange, onToggle, calcArea, errors }) {
-  return (
-    <div className="step-content">
-      <div className="form-card">
-        <div className="form-card__header">
-          <span className="form-card__icon"><Ruler size={16} /></span>
-          <h3 className="form-card__title">Dimensiones y área</h3>
-        </div>
-        <DimensionCalc caract={caract} onChange={onChange} calcArea={calcArea} errors={errors} />
-        <div className="field">
-          <label className="field__label">Altura (m)</label>
-          <input className="field__input" type="number" step="0.1" min="0" placeholder="0.0"
-            value={caract.altura || ''} onChange={(e) => onChange('altura', e.target.value)} />
-        </div>
-      </div>
-
-      <div className="form-card">
-        <div className="form-card__header">
-          <span className="form-card__icon"><Star size={16} /></span>
-          <h3 className="form-card__title">Características</h3>
-        </div>
-        <ChipsGrid items={[
-          { key: 'oficina', label: 'Oficina' },
-          { key: 'bano', label: 'Baño' },
-          { key: 'muelle_carga', label: 'Muelle de carga' },
-          { key: 'parqueadero', label: 'Parqueadero' },
-          { key: 'vigilancia', label: 'Vigilancia' }
-        ]} caract={caract} onToggle={onToggle} />
-      </div>
-    </div>
-  )
-}
-
-function FincaForm({ caract, onChange, onToggle, errors }) {
-  return (
-    <div className="step-content">
-      <div className="form-card">
-        <div className="form-card__header">
-          <span className="form-card__icon"><Ruler size={16} /></span>
-          <h3 className="form-card__title">Dimensiones</h3>
-        </div>
-        <div className="field">
-          <label className="field__label">Área total (m² o hectáreas) <span className="field__required">*</span></label>
-          <input className={`field__input ${errors?.area_total ? 'field__input--error' : ''}`} type="number" step="0.01" min="0"
-            placeholder="0" value={caract.area_total || ''} onChange={(e) => onChange('area_total', e.target.value)} />
-          {errors?.area_total && <span className="field__error"><AlertCircle size={11} /> {errors.area_total}</span>}
-        </div>
-        <div className="field">
-          <label className="field__label">Área construida (m²)</label>
-          <input className="field__input" type="number" step="0.01" min="0" placeholder="0"
-            value={caract.area_construida || ''} onChange={(e) => onChange('area_construida', e.target.value)} />
-        </div>
-      </div>
-
-      <div className="form-card">
-        <div className="form-card__header">
-          <span className="form-card__icon"><Star size={16} /></span>
-          <h3 className="form-card__title">Características</h3>
-        </div>
-        <ChipsGrid items={[
-          { key: 'piscina', label: 'Piscina' },
-          { key: 'lago', label: 'Lago' },
-          { key: 'rio', label: 'Río' },
-          { key: 'cultivos', label: 'Cultivos' },
-          { key: 'ganado', label: 'Ganado' },
-          { key: 'casa_principal', label: 'Casa principal' },
-          { key: 'casa_trabajadores', label: 'Casa trabajadores' },
-          { key: 'establo', label: 'Establo' },
-          { key: 'corral', label: 'Corral' }
-        ]} caract={caract} onToggle={onToggle} />
-      </div>
-    </div>
-  )
-}
-
-function LoteForm({ caract, onChange, onToggle, calcArea, errors }) {
-  return (
-    <div className="step-content">
-      <div className="form-card">
-        <div className="form-card__header">
-          <span className="form-card__icon"><Ruler size={16} /></span>
-          <h3 className="form-card__title">Dimensiones y área</h3>
-        </div>
-        <DimensionCalc caract={caract} onChange={onChange} calcArea={calcArea} showAreaConstruida={false} errors={errors} />
-        <div className="field">
-          <label className="field__label">Área total (m²) <span className="field__required">*</span></label>
-          <input className={`field__input ${errors?.area_total ? 'field__input--error' : ''}`} type="number" step="0.01" min="0"
-            placeholder="0" value={caract.area_total || ''} onChange={(e) => onChange('area_total', e.target.value)} />
-          {errors?.area_total && <span className="field__error"><AlertCircle size={11} /> {errors.area_total}</span>}
-        </div>
-      </div>
-
-      <div className="form-card">
-        <div className="form-card__header">
-          <span className="form-card__icon"><Star size={16} /></span>
-          <h3 className="form-card__title">Características del terreno</h3>
-        </div>
-        <ChipsGrid items={[
-          { key: 'esquinero', label: 'Esquinero' },
-          { key: 'plano', label: 'Plano' },
-          { key: 'inclinado', label: 'Inclinado' },
-          { key: 'servicios_publicos', label: 'Servicios públicos' },
-          { key: 'escrituras', label: 'Escrituras' }
-        ]} caract={caract} onToggle={onToggle} />
-      </div>
-    </div>
-  )
-}
