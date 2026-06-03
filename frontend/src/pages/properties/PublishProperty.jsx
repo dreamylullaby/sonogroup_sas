@@ -279,11 +279,11 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
         }
 
         // --- FRENTE: required, > 0 for all types that show it ---
-        if (['casa', 'apartamento', 'apartaestudio', 'local', 'bodega', 'lote'].includes(tipo)) {
+        if (['casa', 'apartamento', 'local', 'bodega', 'lote'].includes(tipo)) {
           validateMustBePositive(caract.frente, 'frente', 'El frente debe ser mayor a 0')
         }
         // --- FONDO: required, > 0 for all types that show it ---
-        if (['casa', 'apartamento', 'apartaestudio', 'local', 'bodega', 'lote'].includes(tipo)) {
+        if (['casa', 'apartamento', 'local', 'bodega', 'lote'].includes(tipo)) {
           validateMustBePositive(caract.fondo, 'fondo', 'El fondo debe ser mayor a 0')
         }
         // --- AREA CONSTRUIDA: required, > 0 for types that show it ---

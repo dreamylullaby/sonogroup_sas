@@ -76,7 +76,7 @@ function mapearCaracteristicas(tipo, caract, servicios = {}) {
                 ascensor: c.ascensor || false,
                 vigilancia: c.vigilancia || false,
                 vigilancia_valor: c.vigilancia ? (c.vigilancia_valor || c.valor_vigilancia || null) : null,
-                zonas_comunes: c.zona_social || c.zonas_comunes || '[]',
+                zonas_comunes: Array.isArray(c.zonas_comunes) ? c.zonas_comunes : (c.zona_social || []),
                 descripcion_acabados: c.descripcion_acabados || null
             };
         case 'apartaestudio':

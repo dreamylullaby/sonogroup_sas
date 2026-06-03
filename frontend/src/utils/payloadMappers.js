@@ -15,7 +15,7 @@ export function mapCaracteristicasToBackend(tipo, formData) {
         fondo: parseNum(formData.fondo),
         area_lote: parseNum(formData.area_lote),
         area_construida: parseNum(formData.area_construida),
-        anio_construccion: parseInt(formData.anos_construccion) || null,
+        anio_construccion: parseInt(formData.ano_construccion) || parseInt(formData.anos_construccion) || null,
         cantidad_duenos: parseInt(formData.cantidad_duenos) || null,
         pisos: parseInt(formData.pisos) || 1,
         habitaciones: parseInt(formData.habitaciones) || 1,
@@ -26,10 +26,10 @@ export function mapCaracteristicasToBackend(tipo, formData) {
         cuarto_servicio: !!formData.cuarto_servicio,
         bano_servicio: !!formData.bano_servicio,
         tipo_parqueadero: formData.parqueadero || formData.tipo_parqueadero || null,
-        parqueadero_cantidad: parseInt(formData.parqueadero_cantidad) || 0,
+        parqueadero_cantidad: parseInt(formData.parqueaderos) || parseInt(formData.parqueadero_cantidad) || 0,
         patio: !!formData.patio,
         jardin: !!formData.jardin,
-        antejadin: !!formData.antejadin,
+        antejadin: !!formData.antejardin || !!formData.antejadin,
         terraza: !!formData.terraza,
         balcon: !!formData.balcon,
         zona_lavanderia: !!formData.zona_lavanderia,
@@ -40,12 +40,16 @@ export function mapCaracteristicasToBackend(tipo, formData) {
         descripcion_acabados: formData.descripcion_acabados || null
       }
 
-    case 'apartamento':
+    case 'apartamento': {
+      // Chips que se agregan al array zonas_comunes en BD
+      const zonaComunesChips = ['gimnasio', 'piscina', 'terraza', 'zona_lavanderia', 'deposito', 'cocina_equipada']
+      const zonas_comunes = zonaComunesChips.filter(chip => !!formData[chip])
+
       return {
         area_construida: parseNum(formData.area_construida),
         frente: parseNum(formData.frente),
         fondo: parseNum(formData.fondo),
-        anio_construccion: parseInt(formData.anos_construccion) || null,
+        anio_construccion: parseInt(formData.ano_construccion) || parseInt(formData.anos_construccion) || null,
         cantidad_duenos: parseInt(formData.cantidad_duenos) || null,
         piso: parseInt(formData.piso) || null,
         torre: parseInt(formData.torre) || null,
@@ -62,9 +66,10 @@ export function mapCaracteristicasToBackend(tipo, formData) {
         vigilancia: !!formData.vigilancia,
         // BD v3.4 constraint: vigilancia=false → vigilancia_valor must be NULL
         vigilancia_valor: formData.vigilancia ? parseNum(formData.valor_vigilancia || formData.vigilancia_valor) : null,
-        zonas_comunes: formData.zonas_comunes || formData.zona_social || '[]',
+        zonas_comunes,
         descripcion_acabados: formData.descripcion_acabados || null
       }
+    }
 
     case 'apartaestudio':
       return {
@@ -90,9 +95,9 @@ export function mapCaracteristicasToBackend(tipo, formData) {
         piso: parseInt(formData.piso) || null,
         zona_local: formData.zona_local || null,
         uso_pot: formData.uso_pot || formData.uso_suelo || null,
-        mezzanine: !!formData.mezzanine || !!formData.entrepiso,
-        banos: !!formData.banos,
-        parqueaderos: parseInt(formData.parqueaderos) || parseInt(formData.parqueadero) || 0,
+        mezzanine: !!formData.mezanine || !!formData.mezzanine || !!formData.entrepiso,
+        banos: !!formData.bano_privado || !!formData.banos,
+        parqueaderos: formData.parqueadero ? 1 : (parseInt(formData.parqueaderos) || 0),
         vitrina: !!formData.vitrina,
         sotano: !!formData.sotano,
         descripcion_acabados: formData.descripcion_acabados || null
@@ -104,15 +109,15 @@ export function mapCaracteristicasToBackend(tipo, formData) {
         frente: parseNum(formData.frente),
         fondo: parseNum(formData.fondo),
         area_lote: parseNum(formData.area_lote),
-        altura_libre: parseNum(formData.altura_libre),
+        altura_libre: parseNum(formData.altura) || parseNum(formData.altura_libre),
         tipo_porton: formData.tipo_puerta_carga || formData.tipo_porton || null,
         capacidad_carga: formData.capacidad_carga || null,
         acceso_camiones: !!formData.acceso_camiones,
-        rampa_cargue: !!formData.rampa_cargue,
-        oficinas: !!formData.oficinas,
-        banos: !!formData.banos,
+        rampa_cargue: !!formData.muelle_carga || !!formData.rampa_cargue,
+        oficinas: !!formData.oficina || !!formData.oficinas,
+        banos: !!formData.bano || !!formData.banos,
         vestier: !!formData.vestier,
-        parqueaderos: parseInt(formData.parqueaderos) || 0,
+        parqueaderos: formData.parqueadero ? 1 : (parseInt(formData.parqueaderos) || 0),
         descripcion_acabados: formData.descripcion_acabados || null
       }
 
@@ -121,23 +126,23 @@ export function mapCaracteristicasToBackend(tipo, formData) {
         area_total: parseNum(formData.area_total),
         unidad_area: formData.unidad_area || 'm2',
         area_cultivable: parseNum(formData.area_cultivable),
-        area_construcciones: parseNum(formData.area_construcciones),
+        area_construcciones: parseNum(formData.area_construida) || parseNum(formData.area_construcciones),
         topografia: formData.topografia || null,
-        fuentes_agua: formData.fuentes_agua || null,
+        fuentes_agua: formData.rio ? 'rio' : (formData.fuentes_agua || null),
         casa_principal: !!formData.casa_principal,
         casa_principal_detalle: formData.casa_principal_detalle || null,
         otras_construcciones: formData.otras_construcciones || null,
         numero_casas: parseInt(formData.numero_casas) || 0,
         tipo_via_acceso: formData.vias_acceso || formData.tipo_via_acceso || null,
         descripcion_via: formData.descripcion_via || null,
-        cultivos_actuales: formData.cultivos_actuales || null,
-        animales: formData.animales || null,
+        cultivos_actuales: formData.cultivos ? (formData.cultivos_actuales || 'Sí') : (formData.cultivos_actuales || null),
+        animales: formData.ganado ? (formData.animales || 'Sí') : (formData.animales || null),
         piscina: !!formData.piscina,
         jacuzzi: !!formData.jacuzzi,
         chimenea: !!formData.chimenea,
         cancha: !!formData.cancha,
-        lago_estanque: !!formData.lago_estanque,
-        cabana_mayordomo: !!formData.cabana_mayordomo,
+        lago_estanque: !!formData.lago || !!formData.lago_estanque,
+        cabana_mayordomo: !!formData.casa_trabajadores || !!formData.cabana_mayordomo,
         minutos_cabecera: parseInt(formData.minutos_cabecera) || null
       }
 
@@ -146,12 +151,13 @@ export function mapCaracteristicasToBackend(tipo, formData) {
         area_total: parseNum(formData.area_total),
         frente: parseNum(formData.frente),
         fondo: parseNum(formData.fondo),
-        topografia: formData.topografia || null,
-        pendiente: !!formData.pendiente,
+        topografia: formData.esquinero ? 'esquinero' : (formData.topografia || null),
+        pendiente: formData.inclinado ? true : (formData.plano ? false : null),
         tipo_via_acceso: formData.vias_acceso || formData.tipo_via_acceso || null,
         descripcion_via: formData.descripcion_via || null,
+        servicios_disponibles: formData.servicios_publicos ? ['acueducto', 'energia', 'alcantarillado'] : (formData.servicios_disponibles || []),
         uso_pot: formData.uso_suelo || formData.uso_pot || null,
-        tiene_documento: !!formData.tiene_documento,
+        tiene_documento: !!formData.escrituras || !!formData.tiene_documento,
         tiene_casa: !!formData.tiene_casa
       }
 
