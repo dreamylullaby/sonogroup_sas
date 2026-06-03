@@ -287,7 +287,7 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
           validateMustBePositive(caract.fondo, 'fondo', 'El fondo debe ser mayor a 0')
         }
         // --- AREA CONSTRUIDA: required, > 0 for types that show it ---
-        if (['casa', 'apartamento', 'apartaestudio', 'bodega', 'finca'].includes(tipo)) {
+        if (['casa', 'apartamento', 'bodega', 'finca'].includes(tipo)) {
           validateMustBePositive(caract.area_construida, 'area_construida', 'El área construida debe ser mayor a 0 m²')
         }
         // --- AREA TOTAL: required, > 0 ---
@@ -311,7 +311,7 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
           }
         }
         // --- PARQUEADEROS: integer >= 0, default 0 is valid ---
-        if (['casa', 'apartamento'].includes(tipo)) {
+        if (['casa'].includes(tipo)) {
           const parkVal = caract.parqueaderos
           if (parkVal !== '' && parkVal !== undefined && parkVal !== null) {
             if (Number(parkVal) < 0) {
@@ -971,11 +971,9 @@ function ApartamentoForm({ caract, onChange, onToggle, onInc, onDec, calcArea, e
         <div className="counters-grid">
           <Counter label="Habitaciones" value={caract.habitaciones} onInc={() => onInc('habitaciones')} onDec={() => onDec('habitaciones')} required />
           <Counter label="Baños" value={caract.banos} onInc={() => onInc('banos')} onDec={() => onDec('banos')} required />
-          <Counter label="Parqueaderos" value={caract.parqueaderos} onInc={() => onInc('parqueaderos', 10)} onDec={() => onDec('parqueaderos')} required />
         </div>
         {errors?.habitaciones && <span className="field__error"><AlertCircle size={11} /> {errors.habitaciones}</span>}
         {errors?.banos && <span className="field__error"><AlertCircle size={11} /> {errors.banos}</span>}
-        {errors?.parqueaderos && <span className="field__error"><AlertCircle size={11} /> {errors.parqueaderos}</span>}
       </div>
       <div className="form-card">
         <div className="form-card__header"><span className="form-card__icon"><Star size={16} /></span><h3 className="form-card__title">Amenidades</h3></div>
@@ -1005,7 +1003,7 @@ function ApartaestudioForm({ caract, onChange, onToggle, calcArea, errors, onBlu
       </div>
       <div className="form-card">
         <div className="form-card__header"><span className="form-card__icon"><Star size={16} /></span><h3 className="form-card__title">Amenidades</h3></div>
-        <ChipsGrid items={[{ key: 'balcon', label: 'Balcón' }, { key: 'zona_lavanderia', label: 'Zona lavandería' }, { key: 'cocina_equipada', label: 'Cocina equipada' }, { key: 'deposito', label: 'Depósito' }]} caract={caract} onToggle={onToggle} />
+        <ChipsGrid items={[{ key: 'balcon', label: 'Balcón' }, { key: 'deposito', label: 'Depósito' }, { key: 'parqueadero', label: 'Parqueadero' }, { key: 'ascensor', label: 'Ascensor' }, { key: 'vigilancia', label: 'Vigilancia' }, { key: 'amoblado', label: 'Amoblado' }]} caract={caract} onToggle={onToggle} />
       </div>
     </div>
   )
@@ -1080,6 +1078,28 @@ function FincaForm({ caract, onChange, onToggle, errors, onBlur }) {
 
 function LoteForm({ caract, onChange, onToggle, calcArea, errors, onBlur }) {
   const blockKeys = (e) => { if (['-', 'e', 'E', '+'].includes(e.key)) e.preventDefault() }
+
+  // plano and inclinado are mutually exclusive
+  const handleLoteToggle = (key) => {
+    if (key === 'plano') {
+      if (caract.plano) {
+        onChange('plano', false)
+      } else {
+        onChange('plano', true)
+        onChange('inclinado', false)
+      }
+    } else if (key === 'inclinado') {
+      if (caract.inclinado) {
+        onChange('inclinado', false)
+      } else {
+        onChange('inclinado', true)
+        onChange('plano', false)
+      }
+    } else {
+      onToggle(key)
+    }
+  }
+
   return (
     <div className="step-content">
       <div className="form-card">
@@ -1093,7 +1113,7 @@ function LoteForm({ caract, onChange, onToggle, calcArea, errors, onBlur }) {
       </div>
       <div className="form-card">
         <div className="form-card__header"><span className="form-card__icon"><Star size={16} /></span><h3 className="form-card__title">Características del terreno</h3></div>
-        <ChipsGrid items={[{ key: 'esquinero', label: 'Esquinero' }, { key: 'plano', label: 'Plano' }, { key: 'inclinado', label: 'Inclinado' }, { key: 'servicios_publicos', label: 'Servicios públicos' }, { key: 'escrituras', label: 'Escrituras' }]} caract={caract} onToggle={onToggle} />
+        <ChipsGrid items={[{ key: 'plano', label: 'Plano' }, { key: 'inclinado', label: 'Inclinado' }, { key: 'servicios_publicos', label: 'Servicios públicos' }, { key: 'escrituras', label: 'Escrituras' }]} caract={caract} onToggle={handleLoteToggle} />
       </div>
     </div>
   )

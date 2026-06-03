@@ -16,6 +16,7 @@ export default function AdminPropiedades() {
   const [editModal, setEditModal] = useState(null)
   const [deleteModal, setDeleteModal] = useState(null)
   const [confirmDeleteProp, setConfirmDeleteProp] = useState(null)
+  const [confirmHideProp, setConfirmHideProp] = useState(null)
   const [successModal, setSuccessModal] = useState(null)
   const navigate = useNavigate()
 
@@ -47,12 +48,16 @@ export default function AdminPropiedades() {
     ))
   }, [search, propiedades, vista])
 
-  const handleOcultar = async (id) => {
-    if (!window.confirm('¿Ocultar esta propiedad? No será visible al público.')) return
+  const handleOcultar = async (prop) => {
     try {
-      await api.put(`/api/inmuebles/${id}`, { activo: false, fecha_eliminacion: new Date().toISOString() })
+      await api.put(`/api/inmuebles/${prop.id_inmueble}`, { activo: false, fecha_eliminacion: new Date().toISOString() })
+      setConfirmHideProp(null)
+      setSuccessModal({ type: 'hide', message: 'Propiedad ocultada exitosamente. Ya no será visible al público.' })
       fetchData()
-    } catch (e) { alert('Error: ' + (e.response?.data?.error || e.message)) }
+    } catch (e) {
+      setConfirmHideProp(null)
+      alert('Error: ' + (e.response?.data?.error || e.message))
+    }
   }
 
   const handleEliminar = async (id) => {
@@ -170,7 +175,7 @@ export default function AdminPropiedades() {
                       <div style={{ display: 'flex', gap: '0.3rem', justifyContent: 'center' }}>
                         <button className="admin-btn admin-btn--ghost" title="Ver detalles" onClick={() => setDetailModal(p)}><Eye size={13} /></button>
                         <button className="admin-btn admin-btn--ghost" title="Editar" onClick={() => setEditModal(p)}><Edit2 size={13} /></button>
-                        <button className="admin-btn admin-btn--ghost" title="Ocultar" onClick={() => handleOcultar(p.id_inmueble)}><EyeOff size={13} /></button>
+                        <button className="admin-btn admin-btn--ghost" title="Ocultar" onClick={() => setConfirmHideProp(p)}><EyeOff size={13} /></button>
                         <button className="admin-btn admin-btn--ghost" title="Eliminar" style={{ color: '#dc2626' }} onClick={() => setConfirmDeleteProp(p)}><Trash2 size={13} /></button>
                       </div>
                     </td>
@@ -301,6 +306,38 @@ export default function AdminPropiedades() {
         </div>
       )}
 
+      {/* Confirm Hide Property Modal */}
+      {confirmHideProp && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(13,27,46,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <div style={{ background: '#fff', borderRadius: '14px', padding: '28px', width: '100%', maxWidth: '380px', border: '0.5px solid #e0d8ec' }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+                <EyeOff size={22} color="#D97706" />
+              </div>
+              <h3 style={{ fontSize: '16px', fontWeight: 500, color: '#241929', margin: '0 0 8px' }}>¿Ocultar propiedad #{confirmHideProp.id_inmueble}?</h3>
+              <p style={{ fontSize: '13px', color: '#5A4864', lineHeight: 1.6, margin: 0 }}>
+                La propiedad
+                {confirmHideProp.tipo_inmueble ? ` (${confirmHideProp.tipo_inmueble})` : ''} en {confirmHideProp.ubicaciones?.municipio || 'ubicación desconocida'} dejará de ser visible al público. Podrás reactivarla más tarde.
+              </p>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '20px' }}>
+              <button
+                onClick={() => handleOcultar(confirmHideProp)}
+                style={{ width: '100%', background: '#D97706', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px', fontSize: '12px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer' }}
+              >
+                <EyeOff size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> Ocultar propiedad
+              </button>
+              <button
+                onClick={() => setConfirmHideProp(null)}
+                style={{ width: '100%', background: 'transparent', color: '#5A4864', border: 'none', padding: '8px', fontSize: '11px', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: '3px' }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Success Modal */}
       {successModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(13,27,46,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
@@ -310,7 +347,7 @@ export default function AdminPropiedades() {
                 <CheckCircle size={22} color="#1B6B3A" />
               </div>
               <h3 style={{ fontSize: '16px', fontWeight: 500, color: '#241929', margin: '0 0 8px' }}>
-                {successModal.type === 'edit' ? '¡Edición exitosa!' : '¡Eliminación exitosa!'}
+                {successModal.type === 'edit' ? '¡Edición exitosa!' : successModal.type === 'hide' ? '¡Propiedad oculta!' : '¡Eliminación exitosa!'}
               </h3>
               <p style={{ fontSize: '13px', color: '#5A4864', lineHeight: 1.6, margin: 0 }}>
                 {successModal.message}

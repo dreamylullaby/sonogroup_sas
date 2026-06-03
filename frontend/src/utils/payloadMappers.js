@@ -151,7 +151,7 @@ export function mapCaracteristicasToBackend(tipo, formData) {
         area_total: parseNum(formData.area_total),
         frente: parseNum(formData.frente),
         fondo: parseNum(formData.fondo),
-        topografia: formData.esquinero ? 'esquinero' : (formData.topografia || null),
+        topografia: formData.topografia || null,
         pendiente: formData.inclinado ? true : (formData.plano ? false : null),
         tipo_via_acceso: formData.vias_acceso || formData.tipo_via_acceso || null,
         descripcion_via: formData.descripcion_via || null,

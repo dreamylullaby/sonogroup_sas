@@ -31,7 +31,6 @@ function mapDbToForm(dbData, tipo) {
   }
   if (tipo === 'apartamento') {
     if (m.anio_construccion != null) m.ano_construccion = m.anio_construccion
-    if (m.parqueadero_cantidad != null) m.parqueaderos = m.parqueadero_cantidad
     // zonas_comunes is a JSONB array like ["piscina","gimnasio"] — map to individual booleans
     if (m.zonas_comunes) {
       try {
@@ -94,8 +93,6 @@ function mapDbToForm(dbData, tipo) {
     }
     // Remove raw DB field so form state only uses chip keys (plano/inclinado)
     delete m.pendiente
-    // DB: topografia → could indicate esquinero
-    if (m.topografia === 'esquinero') m.esquinero = true
     // DB: servicios_disponibles (JSONB array) → form chip key: servicios_publicos
     if (m.servicios_disponibles) {
       try {
@@ -312,7 +309,7 @@ export default function PropertyEditModal({ property, onClose, onSaved }) {
         if (['casa', 'apartamento', 'local', 'bodega', 'lote'].includes(tipo)) {
           validateMustBePositive(caract.fondo, 'fondo', 'El fondo debe ser mayor a 0')
         }
-        if (['casa', 'apartamento', 'apartaestudio', 'bodega', 'finca'].includes(tipo)) {
+        if (['casa', 'apartamento', 'bodega', 'finca'].includes(tipo)) {
           validateMustBePositive(caract.area_construida, 'area_construida', 'El área construida debe ser mayor a 0 m²')
         }
         if (['apartaestudio', 'lote', 'finca', 'local'].includes(tipo)) {
@@ -332,7 +329,7 @@ export default function PropertyEditModal({ property, onClose, onSaved }) {
             newErrors.banos = 'Ingresa un número entero de baños'
           }
         }
-        if (['casa', 'apartamento'].includes(tipo)) {
+        if (['casa'].includes(tipo)) {
           const parkVal = caract.parqueaderos
           if (parkVal !== '' && parkVal !== undefined && parkVal !== null) {
             if (Number(parkVal) < 0) {
@@ -791,10 +788,8 @@ function ModalApartamentoForm({ caract, onChange, onToggle, onInc, onDec, calcAr
       <p className="pem__section-title" style={{ marginTop: '1rem' }}><DoorOpen size={13} /> Espacios</p>
       <ModalCounter label="Habitaciones" value={caract.habitaciones} onInc={() => onInc('habitaciones')} onDec={() => onDec('habitaciones')} required />
       <ModalCounter label="Baños" value={caract.banos} onInc={() => onInc('banos')} onDec={() => onDec('banos')} required />
-      <ModalCounter label="Parqueaderos" value={caract.parqueaderos} onInc={() => onInc('parqueaderos', 10)} onDec={() => onDec('parqueaderos')} required />
       {errors?.habitaciones && <span className="pem__error"><AlertCircle size={11} /> {errors.habitaciones}</span>}
       {errors?.banos && <span className="pem__error"><AlertCircle size={11} /> {errors.banos}</span>}
-      {errors?.parqueaderos && <span className="pem__error"><AlertCircle size={11} /> {errors.parqueaderos}</span>}
       <p className="pem__section-title" style={{ marginTop: '1rem' }}><Star size={13} /> Amenidades</p>
       <ModalChipsGrid items={AMENIDADES_APTO} caract={caract} onToggle={onToggle} />
     </div>
@@ -817,7 +812,7 @@ function ModalApartaestudioForm({ caract, onChange, onToggle, calcArea, errors, 
         {errors?.piso && <span className="pem__error"><AlertCircle size={11} /> {errors.piso}</span>}
       </div>
       <p className="pem__section-title" style={{ marginTop: '1rem' }}><Star size={13} /> Amenidades</p>
-      <ModalChipsGrid items={[{ key: 'balcon', label: 'Balcón' }, { key: 'zona_lavanderia', label: 'Zona lavandería' }, { key: 'cocina_equipada', label: 'Cocina equipada' }, { key: 'deposito', label: 'Depósito' }]} caract={caract} onToggle={onToggle} />
+      <ModalChipsGrid items={[{ key: 'balcon', label: 'Balcón' }, { key: 'deposito', label: 'Depósito' }, { key: 'parqueadero', label: 'Parqueadero' }, { key: 'ascensor', label: 'Ascensor' }, { key: 'vigilancia', label: 'Vigilancia' }, { key: 'amoblado', label: 'Amoblado' }]} caract={caract} onToggle={onToggle} />
     </div>
   )
 }
@@ -880,6 +875,32 @@ function ModalFincaForm({ caract, onChange, onToggle, errors, onBlur }) {
 
 function ModalLoteForm({ caract, onChange, onToggle, calcArea, errors, onBlur }) {
   const blockKeys = (e) => { if (['-', 'e', 'E', '+'].includes(e.key)) e.preventDefault() }
+
+  // plano and inclinado are mutually exclusive
+  const handleLoteToggle = (key) => {
+    if (key === 'plano') {
+      if (caract.plano) {
+        // Deactivating plano
+        onChange('plano', false)
+      } else {
+        // Activating plano → deactivate inclinado
+        onChange('plano', true)
+        onChange('inclinado', false)
+      }
+    } else if (key === 'inclinado') {
+      if (caract.inclinado) {
+        // Deactivating inclinado
+        onChange('inclinado', false)
+      } else {
+        // Activating inclinado → deactivate plano
+        onChange('inclinado', true)
+        onChange('plano', false)
+      }
+    } else {
+      onToggle(key)
+    }
+  }
+
   return (
     <div>
       <p className="pem__section-title"><Ruler size={13} /> Dimensiones y área</p>
@@ -890,7 +911,7 @@ function ModalLoteForm({ caract, onChange, onToggle, calcArea, errors, onBlur })
         {errors?.area_total && <span className="pem__error"><AlertCircle size={11} /> {errors.area_total}</span>}
       </div>
       <p className="pem__section-title" style={{ marginTop: '1rem' }}><Star size={13} /> Características del terreno</p>
-      <ModalChipsGrid items={[{ key: 'esquinero', label: 'Esquinero' }, { key: 'plano', label: 'Plano' }, { key: 'inclinado', label: 'Inclinado' }, { key: 'servicios_publicos', label: 'Servicios públicos' }, { key: 'escrituras', label: 'Escrituras' }]} caract={caract} onToggle={onToggle} />
+      <ModalChipsGrid items={[{ key: 'plano', label: 'Plano' }, { key: 'inclinado', label: 'Inclinado' }, { key: 'servicios_publicos', label: 'Servicios públicos' }, { key: 'escrituras', label: 'Escrituras' }]} caract={caract} onToggle={handleLoteToggle} />
     </div>
   )
 }
