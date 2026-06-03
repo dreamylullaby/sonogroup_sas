@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+﻿import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { api, parseApiError, ENUMS, ENUM_LABELS } from '../../config/api'
@@ -41,7 +41,7 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
   })
 
   const [caract, setCaract] = useState({})
-
+  const [step4ShowErrors, setStep4ShowErrors] = useState(false)
   useEffect(() => {
     if (editMode && propertyId) loadPropertyData()
     else loadDraft()
@@ -78,6 +78,13 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
   useEffect(() => {
     if (!editMode) setCaract({})
   }, [formData.tipo_inmueble, editMode])
+
+  useEffect(() => {
+    if (currentStep === 4) {
+      setStep4ShowErrors(false)
+      setErrors({})
+    }
+  }, [currentStep])
 
   useEffect(() => {
     if (formData.tipo_operacion === 'arriendo') {
@@ -159,63 +166,228 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
     return f > 0 && fo > 0 ? (f * fo).toFixed(2) : null
   }
 
-  const validateStep = (step) => {
+  const validateStep = (step, { show = true } = {}) => {
     const newErrors = {}
     switch (step) {
       case 1:
-        if (!formData.tipo_inmueble) newErrors.tipo_inmueble = 'Selecciona un tipo'
-        if (!formData.tipo_operacion) newErrors.tipo_operacion = 'Selecciona una operación'
+        if (!formData.tipo_inmueble) newErrors.tipo_inmueble = 'Selecciona una opción válida'
+        if (!formData.tipo_operacion) newErrors.tipo_operacion = 'Selecciona una opción válida'
         break
       case 2:
-        if (!formData.valor || parseInt(formData.valor) < 200000) newErrors.valor = 'El precio mínimo es $200.000'
-        if (formData.descripcion && formData.descripcion.trim().length > 0 && formData.descripcion.trim().length < 10)
-          newErrors.descripcion = 'Mínimo 10 caracteres'
+        // Precio - requerido, > 0, min 200000, max 50000000000
+        if (!formData.valor || String(formData.valor).trim() === '') {
+          newErrors.valor = 'Este campo es obligatorio'
+        } else if (Number(formData.valor) < 0) {
+          newErrors.valor = 'El precio no puede ser negativo'
+        } else if (Number(formData.valor) <= 0) {
+          newErrors.valor = 'El precio debe ser mayor a $0'
+        } else if (Number(formData.valor) < 200000) {
+          newErrors.valor = 'El precio mínimo es $200.000'
+        } else if (Number(formData.valor) > 50000000000) {
+          newErrors.valor = 'El precio no puede superar $50.000.000.000'
+        }
+        // Valor administración - requerido, acepta 0
+        if (formData.valor_administracion === '' || formData.valor_administracion === null || formData.valor_administracion === undefined) {
+          newErrors.valor_administracion = 'Ingresa 0 si no aplica administración'
+        } else if (Number(formData.valor_administracion) < 0) {
+          newErrors.valor_administracion = 'El valor no puede ser negativo'
+        }
+        // Estrato - requerido
+        if (!formData.estrato && formData.estrato !== '0') {
+          newErrors.estrato = 'Selecciona una opción válida'
+        }
+        // Descripción - requerido, min 10, max 2000
+        if (!formData.descripcion || formData.descripcion.trim().length === 0) {
+          newErrors.descripcion = 'Este campo es obligatorio'
+        } else if (formData.descripcion.trim().length < 10) {
+          newErrors.descripcion = 'El título debe tener al menos 10 caracteres'
+        } else if (formData.descripcion.trim().length > 2000) {
+          newErrors.descripcion = 'La descripción no puede superar 2000 caracteres'
+        }
+        // Estado inmueble - requerido
+        if (!formData.estado_inmueble) newErrors.estado_inmueble = 'Selecciona una opción válida'
+        // Zona - requerido
+        if (!formData.zona) newErrors.zona = 'Selecciona una opción válida'
+        // numero_matricula - OPCIONAL, pero if filled validate format
+        if (formData.numero_matricula && formData.numero_matricula.trim() !== '') {
+          if (!/^[A-Za-z0-9\-]+$/.test(formData.numero_matricula.trim())) {
+            newErrors.numero_matricula = 'Formato inválido. Ej: 070-12345'
+          }
+        }
+        // codigo_catastral - OPCIONAL, but if filled validate format
+        if (formData.codigo_catastral && formData.codigo_catastral.trim() !== '') {
+          if (!/^[0-9\-]+$/.test(formData.codigo_catastral.trim())) {
+            newErrors.codigo_catastral = 'Formato inválido. Ej: 00-00-0000-0000-000'
+          }
+        }
         break
       case 3:
-        if (!ubicacion.departamento) newErrors.departamento = 'Selecciona un departamento'
-        if (!ubicacion.municipio) newErrors.municipio = 'Selecciona un municipio'
-        if (!ubicacion.barrio_vereda || ubicacion.barrio_vereda.trim().length < 3) newErrors.barrio_vereda = 'El barrio/vereda es requerido (mínimo 3 caracteres)'
-        if (!ubicacion.direccion || ubicacion.direccion.trim().length < 8) newErrors.direccion = 'La dirección es requerida (mínimo 8 caracteres)'
+        if (!ubicacion.departamento) newErrors.departamento = 'Selecciona el departamento'
+        if (!ubicacion.municipio) newErrors.municipio = 'Ingresa el municipio o ciudad'
+        // Barrio/Vereda: requerido, min 3, max 100, regex permisivo
+        if (!ubicacion.barrio_vereda || ubicacion.barrio_vereda.trim().length === 0) {
+          newErrors.barrio_vereda = 'Este campo es obligatorio'
+        } else if (ubicacion.barrio_vereda.trim().length < 3) {
+          newErrors.barrio_vereda = 'El barrio o vereda debe tener al menos 3 caracteres'
+        } else if (ubicacion.barrio_vereda.trim().length > 100) {
+          newErrors.barrio_vereda = 'El barrio o vereda no puede superar 100 caracteres'
+        } else if (!/^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ0-9\s\-]+$/.test(ubicacion.barrio_vereda.trim())) {
+          newErrors.barrio_vereda = 'El barrio solo puede contener letras, números, espacios y guiones'
+        }
+        // Dirección: requerido, min 8, max 200, regex flexible
+        if (!ubicacion.direccion || ubicacion.direccion.trim().length === 0) {
+          newErrors.direccion = 'Este campo es obligatorio'
+        } else if (ubicacion.direccion.trim().length < 8) {
+          newErrors.direccion = 'La dirección debe tener al menos 8 caracteres'
+        } else if (ubicacion.direccion.trim().length > 200) {
+          newErrors.direccion = 'La dirección no puede superar 200 caracteres'
+        } else if (!/^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ0-9\s#.,\-\/]+$/.test(ubicacion.direccion.trim())) {
+          newErrors.direccion = 'La dirección contiene caracteres no permitidos'
+        }
         break
-      case 4:
+      case 4: {
         const tipo = formData.tipo_inmueble
-        if (['casa', 'apartamento'].includes(tipo)) {
-          if (!caract.habitaciones && caract.habitaciones !== 0) newErrors.habitaciones = 'Requerido'
-          if (!caract.banos && caract.banos !== 0) newErrors.banos = 'Requerido'
+
+        // --- Helpers ---
+        // Numeric > 0 (no zero allowed)
+        const validateMustBePositive = (val, field, zeroMsg) => {
+          if (val === '' || val === undefined || val === null) {
+            newErrors[field] = 'Este campo es obligatorio'
+          } else if (Number(val) < 0) {
+            newErrors[field] = 'El valor no puede ser negativo'
+          } else if (Number(val) === 0) {
+            newErrors[field] = zeroMsg || 'El valor debe ser mayor a 0'
+          }
         }
+        // Numeric >= 0 (zero allowed), integer required
+        const validateIntNonNeg = (val, field, msg) => {
+          if (val === '' || val === undefined || val === null) {
+            newErrors[field] = 'Este campo es obligatorio'
+          } else if (Number(val) < 0) {
+            newErrors[field] = 'El valor no puede ser negativo'
+          } else if (!Number.isInteger(Number(val))) {
+            newErrors[field] = msg || 'Ingresa un número entero'
+          }
+        }
+        // Numeric >= 0 (zero allowed), decimal ok
+        const validateNumNonNeg = (val, field) => {
+          if (val === '' || val === undefined || val === null) {
+            newErrors[field] = 'Este campo es obligatorio'
+          } else if (Number(val) < 0) {
+            newErrors[field] = 'El valor no puede ser negativo'
+          }
+        }
+
+        // --- FRENTE: required, > 0 for all types that show it ---
+        if (['casa', 'apartamento', 'apartaestudio', 'local', 'bodega', 'lote'].includes(tipo)) {
+          validateMustBePositive(caract.frente, 'frente', 'El frente debe ser mayor a 0')
+        }
+        // --- FONDO: required, > 0 for all types that show it ---
+        if (['casa', 'apartamento', 'apartaestudio', 'local', 'bodega', 'lote'].includes(tipo)) {
+          validateMustBePositive(caract.fondo, 'fondo', 'El fondo debe ser mayor a 0')
+        }
+        // --- AREA CONSTRUIDA: required, > 0 for types that show it ---
+        if (['casa', 'apartamento', 'apartaestudio', 'bodega', 'finca'].includes(tipo)) {
+          validateMustBePositive(caract.area_construida, 'area_construida', 'El área construida debe ser mayor a 0 m²')
+        }
+        // --- AREA TOTAL: required, > 0 ---
         if (['apartaestudio', 'lote', 'finca', 'local'].includes(tipo)) {
-          if (!caract.area_total) newErrors.area_total = 'Requerido'
+          validateMustBePositive(caract.area_total, 'area_total', 'El área debe ser mayor a 0 m²')
         }
-        if (['bodega'].includes(tipo)) {
-          if (!caract.area_construida) newErrors.area_construida = 'Requerido'
-          if (!caract.frente) newErrors.frente = 'Requerido'
-          if (!caract.fondo) newErrors.fondo = 'Requerido'
+        // --- HABITACIONES: required, integer >= 0 ---
+        if (['casa', 'apartamento'].includes(tipo)) {
+          if (caract.habitaciones === undefined || caract.habitaciones === '' || caract.habitaciones === null) {
+            newErrors.habitaciones = 'Ingresa un número entero de habitaciones'
+          } else if (Number(caract.habitaciones) < 0 || !Number.isInteger(Number(caract.habitaciones))) {
+            newErrors.habitaciones = 'Ingresa un número entero de habitaciones'
+          }
         }
-        if (caract.ano_construccion) {
-          const anio = parseInt(caract.ano_construccion)
-          if (anio < 1900 || anio > CURRENT_YEAR) newErrors.ano_construccion = `Debe estar entre 1900 y ${CURRENT_YEAR}`
+        // --- BAÑOS: required, integer >= 0 ---
+        if (['casa', 'apartamento'].includes(tipo)) {
+          if (caract.banos === undefined || caract.banos === '' || caract.banos === null) {
+            newErrors.banos = 'Ingresa un número entero de baños'
+          } else if (Number(caract.banos) < 0 || !Number.isInteger(Number(caract.banos))) {
+            newErrors.banos = 'Ingresa un número entero de baños'
+          }
+        }
+        // --- PARQUEADEROS: integer >= 0, default 0 is valid ---
+        if (['casa', 'apartamento'].includes(tipo)) {
+          const parkVal = caract.parqueaderos
+          if (parkVal !== '' && parkVal !== undefined && parkVal !== null) {
+            if (Number(parkVal) < 0) {
+              newErrors.parqueaderos = 'El número de parqueaderos no puede ser negativo'
+            } else if (!Number.isInteger(Number(parkVal))) {
+              newErrors.parqueaderos = 'Ingresa un número entero (0, 1, 2...)'
+            }
+          }
+          // If undefined/empty, Counter shows 0 which is valid — no error
+        }
+        // --- PISOS: required, integer >= 1 (casa) ---
+        if (tipo === 'casa') {
+          if (caract.pisos === undefined || caract.pisos === '' || caract.pisos === null) {
+            newErrors.pisos = 'Este campo es obligatorio'
+          } else if (Number(caract.pisos) < 1 || !Number.isInteger(Number(caract.pisos))) {
+            newErrors.pisos = 'El número de pisos debe ser 1 o mayor'
+          }
+        }
+        // --- PISO: required, integer >= 1 (apartamento, apartaestudio) ---
+        if (['apartamento', 'apartaestudio'].includes(tipo)) {
+          if (caract.piso === undefined || caract.piso === '' || caract.piso === null) {
+            newErrors.piso = 'Este campo es obligatorio'
+          } else if (Number(caract.piso) < 1 || !Number.isInteger(Number(caract.piso))) {
+            newErrors.piso = 'El piso debe ser 1 o mayor'
+          }
+        }
+        // --- AÑO DE CONSTRUCCIÓN: required for casa/apartamento, validate range ---
+        if (['casa', 'apartamento'].includes(tipo)) {
+          if (caract.ano_construccion === undefined || caract.ano_construccion === '' || caract.ano_construccion === null) {
+            newErrors.ano_construccion = 'Este campo es obligatorio'
+          } else {
+            const anio = parseInt(caract.ano_construccion)
+            if (isNaN(anio) || anio < 1900 || anio > CURRENT_YEAR) {
+              newErrors.ano_construccion = `Debe estar entre 1900 y ${CURRENT_YEAR}`
+            }
+          }
+        }
+        // --- CANTIDAD DE DUEÑOS: required, > 0 (casa) ---
+        if (tipo === 'casa') {
+          validateMustBePositive(caract.cantidad_duenos, 'cantidad_duenos', 'Debe haber al menos 1 dueño o propietario')
+        }
+        // --- ALTURA: required, > 0 (bodega) ---
+        if (tipo === 'bodega') {
+          validateMustBePositive(caract.altura, 'altura', 'La altura debe ser mayor a 0')
         }
         break
+      }
     }
-    setErrors(newErrors)
-    if (Object.keys(newErrors).length > 0) {
-      setTimeout(() => {
-        const el = formRef.current?.querySelector('.field__input--error, .field__select--error')
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      }, 100)
-      return false
+    if (show) {
+      setErrors(newErrors)
+      if (Object.keys(newErrors).length > 0) {
+        setTimeout(() => {
+          const el = formRef.current?.querySelector('.field__input--error, .field__select--error')
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }, 100)
+      }
     }
-    return true
+    return { isValid: Object.keys(newErrors).length === 0, errors: newErrors }
   }
 
-  const nextStep = () => { if (validateStep(currentStep)) setCurrentStep(prev => Math.min(prev + 1, totalSteps)) }
-  const prevStep = () => { setErrors({}); setCurrentStep(prev => Math.max(prev - 1, 1)) }
+  const nextStep = () => {
+    const result = validateStep(currentStep, { show: true })
+    if (result.isValid) {
+      setErrors({})
+      setStep4ShowErrors(false)
+      setCurrentStep(prev => Math.min(prev + 1, totalSteps))
+    }
+  }
+  const prevStep = () => { setErrors({}); setStep4ShowErrors(false); setCurrentStep(prev => Math.max(prev - 1, 1)) }
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault()
-    if (!validateStep(4)) return
-    setSuccess('')
-    setLoading(true)
+    setStep4ShowErrors(true)
+    const result = validateStep(4, { show: true })
+    if (!result.isValid) return
+
     try {
       const payload = buildInmueblePayload({ ...formData }, ubicacion, servicios, caract)
       if (editMode && propertyId) {
@@ -226,13 +398,13 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
         await api.post('/api/inmuebles-admin', payload)
         setSuccess('Propiedad publicada exitosamente')
         localStorage.removeItem('property_draft')
-        try { const r = await api.get('/api/borradores'); if (r.data?.borradores?.[0]) await api.delete(`/api/borradores/${r.data.borradores[0].id_borrador}`) } catch {}
+        try { const r = await api.get('/api/borradores'); if (r.data?.borradores?.[0]) await api.delete(`/api/borradores/${r.data.borradores[0].id_borrador}`) } catch { }
         setTimeout(() => navigate('/admin'), 1500)
       } else {
         await api.post('/api/inmuebles', payload)
         setSuccess('Propiedad enviada para revisión')
         localStorage.removeItem('property_draft')
-        try { const r = await api.get('/api/borradores'); if (r.data?.borradores?.[0]) await api.delete(`/api/borradores/${r.data.borradores[0].id_borrador}`) } catch {}
+        try { const r = await api.get('/api/borradores'); if (r.data?.borradores?.[0]) await api.delete(`/api/borradores/${r.data.borradores[0].id_borrador}`) } catch { }
         setTimeout(() => navigate('/mis-propiedades'), 1500)
       }
     } catch (err) {
@@ -301,7 +473,7 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
   }
 
   if (!user) { navigate('/login'); return null }
-  if (loadingData) return <div className="publish-property-page"><div className="publish-container" style={{padding:'60px',textAlign:'center',color:'#5A4864'}}>Cargando...</div></div>
+  if (loadingData) return <div className="publish-property-page"><div className="publish-container" style={{ padding: '60px', textAlign: 'center', color: '#5A4864' }}>Cargando...</div></div>
 
   return (
     <div className="publish-property-page">
@@ -315,23 +487,36 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
 
         <form onSubmit={handleSubmit} className="publish-form" noValidate ref={formRef}>
           {success && <div className="success-message">{success}</div>}
-          {errors.general && <div className="field__error" style={{marginBottom:12}}><AlertCircle size={12} /> {errors.general}</div>}
+          {errors.general && <div className="field__error" style={{ marginBottom: 12 }}><AlertCircle size={12} /> {errors.general}</div>}
 
           {currentStep === 1 && <Step1 formData={formData} onChange={handleChange} errors={errors} loading={loading} />}
           {currentStep === 2 && <Step2 formData={formData} onChange={handleChange} onPriceChange={handlePriceChange} onCheckboxChange={handleCheckboxChange} formatPrice={formatPrice} errors={errors} loading={loading} />}
           {currentStep === 3 && <Step3 ubicacion={ubicacion} onUbicacionChange={handleUbicacion} servicios={servicios} onToggleServicio={toggleServicio} errors={errors} loading={loading} />}
-          {currentStep === 4 && <Step4 tipo={formData.tipo_inmueble} caract={caract} onCaractChange={handleCaract} onToggle={toggleCaract} onIncrement={incrementCaract} onDecrement={decrementCaract} calcAreaLote={calcAreaLote} errors={errors} loading={loading} />}
-
+          {currentStep === 4 && (
+            <Step4
+              key={`step4-${currentStep}-${formData.tipo_inmueble}`}
+              tipo={formData.tipo_inmueble}
+              caract={caract}
+              onCaractChange={handleCaract}
+              onToggle={toggleCaract}
+              onIncrement={incrementCaract}
+              onDecrement={decrementCaract}
+              calcAreaLote={calcAreaLote}
+              errors={errors}
+              loading={loading}
+              showErrors={step4ShowErrors}
+            />
+          )}
           <div className="form-action-bar">
             <div className="action-bar-left">
               <button type="button" className="btn-cancel-pub" onClick={() => setShowCancelModal(true)} disabled={loading}>
                 <X size={12} /> Cancelar
               </button>
-              {currentStep > 1 && !editMode && (
+              {/*{currentStep > 1 && !editMode && (
                 <button type="button" className="btn-save-draft" onClick={handleSaveDraft} disabled={loading}>
                   <Save size={12} /> Guardar borrador
                 </button>
-              )}
+              )}*/}
             </div>
             <div className="action-bar-divider"></div>
             <div className="action-bar-right">
@@ -451,46 +636,53 @@ function Step2({ formData, onChange, onPriceChange, onCheckboxChange, formatPric
         </div>
         <div className="form-row">
           <div className="field">
-            <label className="field__label">Administración (COP)</label>
-            <input className="field__input" type="text" placeholder="$ 0" value={formatPrice(formData.valor_administracion)} onChange={(e) => onPriceChange('valor_administracion', e.target.value)} disabled={loading} />
+            <label className="field__label">Administración (COP) <span className="field__required">*</span></label>
+            <input className={`field__input ${errors.valor_administracion ? 'field__input--error' : ''}`} type="text" placeholder="$ 0" value={formatPrice(formData.valor_administracion)} onChange={(e) => onPriceChange('valor_administracion', e.target.value)} disabled={loading} />
+            {errors.valor_administracion && <span className="field__error"><AlertCircle size={11} /> {errors.valor_administracion}</span>}
+            <span className="field__hint">Ingresa 0 si no aplica</span>
           </div>
           <div className="field">
-            <label className="field__label">Estrato</label>
-            <select className="field__select" value={formData.estrato} onChange={(e) => onChange('estrato', e.target.value)} disabled={loading}>
-              <option value="">No aplica</option>
-              {[1,2,3,4,5,6].map(e => <option key={e} value={e}>{e}</option>)}
+            <label className="field__label">Estrato <span className="field__required">*</span></label>
+            <select className={`field__select ${errors.estrato ? 'field__select--error' : ''}`} value={formData.estrato} onChange={(e) => onChange('estrato', e.target.value)} disabled={loading}>
+              <option value="">Seleccionar...</option>
+              {[1, 2, 3, 4, 5, 6].map(e => <option key={e} value={e}>{e}</option>)}
             </select>
+            {errors.estrato && <span className="field__error"><AlertCircle size={11} /> {errors.estrato}</span>}
           </div>
         </div>
         <div className="field">
-          <label className="field__label">Descripción / Título</label>
-          <textarea className={`field__textarea ${errors.descripcion ? 'field__input--error' : ''}`} placeholder="Describe la propiedad (mínimo 10 caracteres)..." value={formData.descripcion} onChange={(e) => onChange('descripcion', e.target.value)} disabled={loading} rows={3} />
+          <label className="field__label">Descripción / Título <span className="field__required">*</span></label>
+          <textarea className={`field__textarea ${errors.descripcion ? 'field__input--error' : ''}`} placeholder="Describe la propiedad (mínimo 10 caracteres)..." value={formData.descripcion} onChange={(e) => onChange('descripcion', e.target.value)} disabled={loading} rows={3} maxLength={2000} />
           {errors.descripcion && <span className="field__error"><AlertCircle size={11} /> {errors.descripcion}</span>}
         </div>
         <div className="form-row">
           <div className="field">
-            <label className="field__label">Estado</label>
-            <select className="field__select" value={formData.estado_inmueble} onChange={(e) => onChange('estado_inmueble', e.target.value)} disabled={loading}>
+            <label className="field__label">Estado <span className="field__required">*</span></label>
+            <select className={`field__select ${errors.estado_inmueble ? 'field__select--error' : ''}`} value={formData.estado_inmueble} onChange={(e) => onChange('estado_inmueble', e.target.value)} disabled={loading}>
               {ENUMS.estado_inmueble.map(e => <option key={e} value={e}>{ENUM_LABELS.estado_inmueble[e]}</option>)}
             </select>
+            {errors.estado_inmueble && <span className="field__error"><AlertCircle size={11} /> {errors.estado_inmueble}</span>}
           </div>
           <div className="field">
-            <label className="field__label">Zona</label>
-            <select className="field__select" value={formData.zona} onChange={(e) => onChange('zona', e.target.value)} disabled={loading}>
+            <label className="field__label">Zona <span className="field__required">*</span></label>
+            <select className={`field__select ${errors.zona ? 'field__select--error' : ''}`} value={formData.zona} onChange={(e) => onChange('zona', e.target.value)} disabled={loading}>
               {ENUMS.zona_tipo.map(z => <option key={z} value={z}>{ENUM_LABELS.zona_tipo[z]}</option>)}
             </select>
+            {errors.zona && <span className="field__error"><AlertCircle size={11} /> {errors.zona}</span>}
           </div>
         </div>
         <div className="form-row">
           <div className="field">
             <label className="field__label">Matrícula ORIP <span className="field__optional">(Opcional)</span></label>
-            <input className="field__input" type="text" placeholder="Número de registro" value={formData.numero_matricula} onChange={(e) => onChange('numero_matricula', e.target.value)} disabled={loading} />
-            <span className="field__hint">Registro en la Oficina de Instrumentos Públicos</span>
+            <input className={`field__input ${errors.numero_matricula ? 'field__input--error' : ''}`} type="text" placeholder="Número de registro" value={formData.numero_matricula} onChange={(e) => onChange('numero_matricula', e.target.value)} disabled={loading} />
+            {errors.numero_matricula && <span className="field__error"><AlertCircle size={11} /> {errors.numero_matricula}</span>}
+            {!errors.numero_matricula && <span className="field__hint">Registro en la Oficina de Instrumentos Públicos</span>}
           </div>
           <div className="field">
             <label className="field__label">Código catastral <span className="field__optional">(Opcional)</span></label>
-            <input className="field__input" type="text" placeholder="Ficha predial" value={formData.codigo_catastral} onChange={(e) => onChange('codigo_catastral', e.target.value)} disabled={loading} />
-            <span className="field__hint">Ficha predial asignada por el IGAC</span>
+            <input className={`field__input ${errors.codigo_catastral ? 'field__input--error' : ''}`} type="text" placeholder="Ficha predial" value={formData.codigo_catastral} onChange={(e) => onChange('codigo_catastral', e.target.value)} disabled={loading} />
+            {errors.codigo_catastral && <span className="field__error"><AlertCircle size={11} /> {errors.codigo_catastral}</span>}
+            {!errors.codigo_catastral && <span className="field__hint">Ficha predial asignada por el IGAC</span>}
           </div>
         </div>
         {formData.tipo_operacion !== 'arriendo' && (
@@ -552,7 +744,7 @@ function Step3({ ubicacion, onUbicacionChange, servicios, onToggleServicio, erro
         <div className="services-grid">
           {Object.entries(servicios).map(([key, val]) => (
             <div key={key} className={`service-chip ${val ? 'service-chip--active' : ''}`} onClick={() => onToggleServicio(key)}>
-              {val ? <CheckCircle size={12} /> : <span style={{width:12,height:12,borderRadius:'50%',border:'1.5px solid currentColor',display:'inline-block'}}></span>}
+              {val ? <CheckCircle size={12} /> : <span style={{ width: 12, height: 12, borderRadius: '50%', border: '1.5px solid currentColor', display: 'inline-block' }}></span>}
               <span>{key.charAt(0).toUpperCase() + key.slice(1)}</span>
             </div>
           ))}
@@ -563,15 +755,44 @@ function Step3({ ubicacion, onUbicacionChange, servicios, onToggleServicio, erro
 }
 
 /* --- STEP 4 --- */
-function Step4({ tipo, caract, onCaractChange, onToggle, onIncrement, onDecrement, calcAreaLote, errors }) {
+function Step4({
+  tipo,
+  caract,
+  onCaractChange,
+  onToggle,
+  onIncrement,
+  onDecrement,
+  calcAreaLote,
+  errors,
+  showErrors
+}) {
+  const [touched, setTouched] = useState({})
+
+  useEffect(() => {
+    if (!showErrors) {
+      setTouched({})
+    }
+  }, [showErrors, tipo])
+
+  const handleBlur = (name) => {
+    setTouched((prev) => ({ ...prev, [name]: true }))
+  }
+
+  const visibleErrors = {}
+  for (const key of Object.keys(errors || {})) {
+    if (showErrors || touched[key]) {
+      visibleErrors[key] = errors[key]
+    }
+  }
+
   switch (tipo) {
-    case 'casa': return <CasaForm caract={caract} onChange={onCaractChange} onToggle={onToggle} onInc={onIncrement} onDec={onDecrement} calcArea={calcAreaLote} errors={errors} />
-    case 'apartamento': return <ApartamentoForm caract={caract} onChange={onCaractChange} onToggle={onToggle} onInc={onIncrement} onDec={onDecrement} calcArea={calcAreaLote} errors={errors} />
-    case 'apartaestudio': return <ApartaestudioForm caract={caract} onChange={onCaractChange} onToggle={onToggle} calcArea={calcAreaLote} errors={errors} />
-    case 'local': return <LocalForm caract={caract} onChange={onCaractChange} onToggle={onToggle} calcArea={calcAreaLote} errors={errors} />
-    case 'bodega': return <BodegaForm caract={caract} onChange={onCaractChange} onToggle={onToggle} calcArea={calcAreaLote} errors={errors} />
-    case 'finca': return <FincaForm caract={caract} onChange={onCaractChange} onToggle={onToggle} errors={errors} />
-    case 'lote': return <LoteForm caract={caract} onChange={onCaractChange} onToggle={onToggle} calcArea={calcAreaLote} errors={errors} />
+    case 'casa': return <CasaForm caract={caract} onChange={onCaractChange} onToggle={onToggle} onInc={onIncrement} onDec={onDecrement} calcArea={calcAreaLote} errors={visibleErrors} onBlur={handleBlur} />
+    case 'apartamento': return <ApartamentoForm caract={caract} onChange={onCaractChange} onToggle={onToggle} onInc={onIncrement} onDec={onDecrement} calcArea={calcAreaLote} errors={visibleErrors} onBlur={handleBlur} />
+    case 'apartaestudio': return <ApartaestudioForm caract={caract} onChange={onCaractChange} onToggle={onToggle} calcArea={calcAreaLote} errors={visibleErrors} onBlur={handleBlur} />
+    case 'local': return <LocalForm caract={caract} onChange={onCaractChange} onToggle={onToggle} calcArea={calcAreaLote} errors={visibleErrors} onBlur={handleBlur} />
+    case 'bodega': return <BodegaForm caract={caract} onChange={onCaractChange} onToggle={onToggle} calcArea={calcAreaLote} errors={visibleErrors} onBlur={handleBlur} />
+    case 'finca': return <FincaForm caract={caract} onChange={onCaractChange} onToggle={onToggle} errors={visibleErrors} onBlur={handleBlur} />
+    case 'lote': return <LoteForm caract={caract} onChange={onCaractChange} onToggle={onToggle} calcArea={calcAreaLote} errors={visibleErrors} onBlur={handleBlur} />
     default: return <div className="step-content"><div className="form-card"><p>Tipo no soportado</p></div></div>
   }
 }
@@ -581,7 +802,7 @@ function Counter({ label, value, onInc, onDec, min = 0, max = 20, required }) {
   const val = parseInt(value) || 0
   return (
     <div className="counter">
-      <span className="counter__label">{label} {required && <span style={{color:'var(--pp-red)'}}>*</span>}</span>
+      <span className="counter__label">{label} {required && <span style={{ color: 'var(--pp-red)' }}>*</span>}</span>
       <div className="counter__controls">
         <button type="button" className="counter__btn" onClick={onDec} disabled={val <= min}>-</button>
         <input className="counter__value" type="text" value={val} readOnly />
@@ -591,30 +812,32 @@ function Counter({ label, value, onInc, onDec, min = 0, max = 20, required }) {
   )
 }
 
-function DimensionCalc({ caract, onChange, calcArea, showAreaConstruida = true, errors }) {
+function DimensionCalc({ caract, onChange, calcArea, showAreaConstruida = true, errors, onBlur }) {
   const areaLote = calcArea()
   const areaConstruida = parseFloat(caract.area_construida) || 0
   const showWarning = showAreaConstruida && areaLote && areaConstruida > parseFloat(areaLote)
+  const blockKeys = (e) => { if (['-', 'e', 'E', '+'].includes(e.key)) e.preventDefault() }
   return (
     <>
       <div className="form-row">
         <div className="field">
-          <label className="field__label">Frente (m)</label>
-          <input className={`field__input ${errors?.frente ? 'field__input--error' : ''}`} type="number" step="0.1" min="0" placeholder="0.0" value={caract.frente || ''} onChange={(e) => onChange('frente', e.target.value)} />
+          <label className="field__label">Frente (m) <span className="field__required">*</span></label>
+          <input className={`field__input ${errors?.frente ? 'field__input--error' : ''}`} type="number" step="0.1" min="1" placeholder="0.0" value={caract.frente || ''} onChange={(e) => onChange('frente', e.target.value)} onKeyDown={blockKeys} onBlur={() => onBlur && onBlur('frente')} />
           {errors?.frente && <span className="field__error"><AlertCircle size={11} /> {errors.frente}</span>}
         </div>
         <div className="field">
-          <label className="field__label">Fondo (m)</label>
-          <input className={`field__input ${errors?.fondo ? 'field__input--error' : ''}`} type="number" step="0.1" min="0" placeholder="0.0" value={caract.fondo || ''} onChange={(e) => onChange('fondo', e.target.value)} />
+          <label className="field__label">Fondo (m) <span className="field__required">*</span></label>
+          <input className={`field__input ${errors?.fondo ? 'field__input--error' : ''}`} type="number" step="0.1" min="1" placeholder="0.0" value={caract.fondo || ''} onChange={(e) => onChange('fondo', e.target.value)} onKeyDown={blockKeys} onBlur={() => onBlur && onBlur('fondo')} />
           {errors?.fondo && <span className="field__error"><AlertCircle size={11} /> {errors.fondo}</span>}
         </div>
       </div>
       {areaLote && <div className="calc-display"><div className="calc-display__value">{areaLote} m²</div><div className="calc-display__label">Área lote calculada</div></div>}
       {showAreaConstruida && (
         <div className="field">
-          <label className="field__label">Área construida (m²)</label>
-          <input className="field__input" type="number" step="0.01" min="0" placeholder="0" value={caract.area_construida || ''} onChange={(e) => onChange('area_construida', e.target.value)} />
-          {showWarning && <span className="field__warning"><AlertCircle size={11} /> Área construida supera el área del lote</span>}
+          <label className="field__label">Área construida (m²) <span className="field__required">*</span></label>
+          <input className={`field__input ${errors?.area_construida ? 'field__input--error' : ''}`} type="number" step="0.01" min="1" placeholder="0" value={caract.area_construida || ''} onChange={(e) => onChange('area_construida', e.target.value)} onKeyDown={blockKeys} onBlur={() => onBlur && onBlur('area_construida')} />
+          {errors?.area_construida && <span className="field__error"><AlertCircle size={11} /> {errors.area_construida}</span>}
+          {showWarning && !errors?.area_construida && <span className="field__warning"><AlertCircle size={11} /> Área construida supera el área del lote</span>}
         </div>
       )}
     </>
@@ -646,3 +869,232 @@ const AMENIDADES_APTO = [
   { key: 'bano_servicio', label: 'Baño de servicio' }, { key: 'deposito', label: 'Depósito' },
   { key: 'gimnasio', label: 'Gimnasio' }, { key: 'piscina', label: 'Piscina' }
 ]
+
+function CasaForm({ caract, onChange, onToggle, onInc, onDec, calcArea, errors, onBlur }) {
+  const blockKeys = (e) => { if (['-', 'e', 'E', '+'].includes(e.key)) e.preventDefault() }
+  return (
+    <div className="step-content">
+      <div className="form-card">
+        <div className="form-card__header"><span className="form-card__icon"><Ruler size={16} /></span><h3 className="form-card__title">Dimensiones y área</h3></div>
+        <DimensionCalc caract={caract} onChange={onChange} calcArea={calcArea} errors={errors} onBlur={onBlur} />
+        <div className="form-row">
+          <div className="field">
+            <label className="field__label">Año de construcción <span className="field__required">*</span></label>
+            <input className={`field__input ${errors?.ano_construccion ? 'field__input--error' : ''}`} type="number" min="1900" max={CURRENT_YEAR} placeholder="Ej: 2015" value={caract.ano_construccion || ''} onChange={(e) => onChange('ano_construccion', e.target.value)} onKeyDown={blockKeys} onBlur={() => onBlur && onBlur('ano_construccion')} />
+            {errors?.ano_construccion && <span className="field__error"><AlertCircle size={11} /> {errors.ano_construccion}</span>}
+          </div>
+          <div className="field">
+            <label className="field__label">Cantidad de dueños <span className="field__required">*</span></label>
+            <input className={`field__input ${errors?.cantidad_duenos ? 'field__input--error' : ''}`} type="number" min="1" placeholder="1" value={caract.cantidad_duenos || ''} onChange={(e) => onChange('cantidad_duenos', e.target.value)} onKeyDown={blockKeys} onBlur={() => onBlur && onBlur('cantidad_duenos')} />
+            {errors?.cantidad_duenos && <span className="field__error"><AlertCircle size={11} /> {errors.cantidad_duenos}</span>}
+          </div>
+        </div>
+        <Counter label="Número de pisos" value={caract.pisos} onInc={() => onInc('pisos', 50)} onDec={() => onDec('pisos', 1)} min={1} max={50} required />
+        {errors?.pisos && <span className="field__error"><AlertCircle size={11} /> {errors.pisos}</span>}
+      </div>
+      <div className="form-card">
+        <div className="form-card__header"><span className="form-card__icon"><DoorOpen size={16} /></span><h3 className="form-card__title">Espacios</h3></div>
+        <div className="counters-grid">
+          <Counter label="Habitaciones" value={caract.habitaciones} onInc={() => onInc('habitaciones')} onDec={() => onDec('habitaciones')} required />
+          <Counter label="Baños" value={caract.banos} onInc={() => onInc('banos')} onDec={() => onDec('banos')} required />
+          <Counter label="Parqueaderos" value={caract.parqueaderos} onInc={() => onInc('parqueaderos', 10)} onDec={() => onDec('parqueaderos')} required />
+        </div>
+        {errors?.habitaciones && <span className="field__error"><AlertCircle size={11} /> {errors.habitaciones}</span>}
+        {errors?.banos && <span className="field__error"><AlertCircle size={11} /> {errors.banos}</span>}
+        {errors?.parqueaderos && <span className="field__error"><AlertCircle size={11} /> {errors.parqueaderos}</span>}
+      </div>
+      <div className="form-card">
+        <div className="form-card__header"><span className="form-card__icon"><Star size={16} /></span><h3 className="form-card__title">Amenidades</h3></div>
+        <ChipsGrid items={AMENIDADES_CASA} caract={caract} onToggle={onToggle} />
+      </div>
+      <div className="form-card">
+        <div className="form-card__header"><span className="form-card__icon"><ClipboardList size={16} /></span><h3 className="form-card__title">Características adicionales</h3></div>
+        <div className="form-row">
+          <div className="field">
+            <label className="field__label">Sala / Comedor</label>
+            <select className="field__select" value={caract.sala_comedor || ''} onChange={(e) => onChange('sala_comedor', e.target.value || null)}>
+              <option value="">No aplica</option><option value="sala">Sala</option><option value="comedor">Comedor</option><option value="sala_comedor">Sala-Comedor</option><option value="separados">Separados</option>
+            </select>
+          </div>
+          <div className="field">
+            <label className="field__label">Tipo de cocina</label>
+            <select className="field__select" value={caract.tipo_cocina || ''} onChange={(e) => onChange('tipo_cocina', e.target.value || null)}>
+              <option value="">No aplica</option><option value="integral">Integral</option><option value="semi_integral">Semi-integral</option><option value="sencilla">Sencilla</option>
+            </select>
+          </div>
+        </div>
+        <div className="form-row">
+          <div className="field">
+            <label className="field__label">Zona lavandería</label>
+            <select className="field__select" value={caract.zona_lavanderia_tipo || ''} onChange={(e) => { onChange('zona_lavanderia_tipo', e.target.value || null); if (e.target.value) onToggle('zona_lavanderia') }}>
+              <option value="">No tiene</option><option value="interna">Interna</option><option value="externa">Externa</option>
+            </select>
+          </div>
+          <div className="field">
+            <label className="field__label">Tipo parqueadero</label>
+            <select className="field__select" value={caract.tipo_parqueadero || ''} onChange={(e) => onChange('tipo_parqueadero', e.target.value || null)}>
+              <option value="">Ninguno</option><option value="interno">Interno</option><option value="externo">Externo</option><option value="cubierto">Cubierto</option><option value="descubierto">Descubierto</option>
+            </select>
+          </div>
+        </div>
+        <div className="field">
+          <label className="field__label">Descripción de acabados</label>
+          <textarea className="field__textarea" rows={3} placeholder="Pisos en porcelanato, cocina en granito..." value={caract.descripcion_acabados || ''} onChange={(e) => onChange('descripcion_acabados', e.target.value)} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ApartamentoForm({ caract, onChange, onToggle, onInc, onDec, calcArea, errors, onBlur }) {
+  const blockKeys = (e) => { if (['-', 'e', 'E', '+'].includes(e.key)) e.preventDefault() }
+  return (
+    <div className="step-content">
+      <div className="form-card">
+        <div className="form-card__header"><span className="form-card__icon"><Ruler size={16} /></span><h3 className="form-card__title">Dimensiones y área</h3></div>
+        <DimensionCalc caract={caract} onChange={onChange} calcArea={calcArea} errors={errors} onBlur={onBlur} />
+        <div className="form-row">
+          <div className="field">
+            <label className="field__label">Piso del apartamento <span className="field__required">*</span></label>
+            <input className={`field__input ${errors?.piso ? 'field__input--error' : ''}`} type="number" min="1" placeholder="Ej: 5" value={caract.piso || ''} onChange={(e) => onChange('piso', e.target.value)} onKeyDown={blockKeys} onBlur={() => onBlur && onBlur('piso')} />
+            {errors?.piso && <span className="field__error"><AlertCircle size={11} /> {errors.piso}</span>}
+          </div>
+          <div className="field">
+            <label className="field__label">Año de construcción <span className="field__required">*</span></label>
+            <input className={`field__input ${errors?.ano_construccion ? 'field__input--error' : ''}`} type="number" min="1900" max={CURRENT_YEAR} placeholder="Ej: 2018" value={caract.ano_construccion || ''} onChange={(e) => onChange('ano_construccion', e.target.value)} onKeyDown={blockKeys} onBlur={() => onBlur && onBlur('ano_construccion')} />
+            {errors?.ano_construccion && <span className="field__error"><AlertCircle size={11} /> {errors.ano_construccion}</span>}
+          </div>
+        </div>
+      </div>
+      <div className="form-card">
+        <div className="form-card__header"><span className="form-card__icon"><DoorOpen size={16} /></span><h3 className="form-card__title">Espacios</h3></div>
+        <div className="counters-grid">
+          <Counter label="Habitaciones" value={caract.habitaciones} onInc={() => onInc('habitaciones')} onDec={() => onDec('habitaciones')} required />
+          <Counter label="Baños" value={caract.banos} onInc={() => onInc('banos')} onDec={() => onDec('banos')} required />
+          <Counter label="Parqueaderos" value={caract.parqueaderos} onInc={() => onInc('parqueaderos', 10)} onDec={() => onDec('parqueaderos')} required />
+        </div>
+        {errors?.habitaciones && <span className="field__error"><AlertCircle size={11} /> {errors.habitaciones}</span>}
+        {errors?.banos && <span className="field__error"><AlertCircle size={11} /> {errors.banos}</span>}
+        {errors?.parqueaderos && <span className="field__error"><AlertCircle size={11} /> {errors.parqueaderos}</span>}
+      </div>
+      <div className="form-card">
+        <div className="form-card__header"><span className="form-card__icon"><Star size={16} /></span><h3 className="form-card__title">Amenidades</h3></div>
+        <ChipsGrid items={AMENIDADES_APTO} caract={caract} onToggle={onToggle} />
+      </div>
+    </div>
+  )
+}
+
+function ApartaestudioForm({ caract, onChange, onToggle, calcArea, errors, onBlur }) {
+  const blockKeys = (e) => { if (['-', 'e', 'E', '+'].includes(e.key)) e.preventDefault() }
+  return (
+    <div className="step-content">
+      <div className="form-card">
+        <div className="form-card__header"><span className="form-card__icon"><Ruler size={16} /></span><h3 className="form-card__title">Dimensiones y área</h3></div>
+        <DimensionCalc caract={caract} onChange={onChange} calcArea={calcArea} showAreaConstruida={true} errors={errors} onBlur={onBlur} />
+        <div className="field">
+          <label className="field__label">Área total (m²) <span className="field__required">*</span></label>
+          <input className={`field__input ${errors?.area_total ? 'field__input--error' : ''}`} type="number" step="0.01" min="1" placeholder="0" value={caract.area_total || ''} onChange={(e) => onChange('area_total', e.target.value)} onKeyDown={blockKeys} onBlur={() => onBlur && onBlur('area_total')} />
+          {errors?.area_total && <span className="field__error"><AlertCircle size={11} /> {errors.area_total}</span>}
+        </div>
+        <div className="field">
+          <label className="field__label">Piso <span className="field__required">*</span></label>
+          <input className={`field__input ${errors?.piso ? 'field__input--error' : ''}`} type="number" min="1" placeholder="Ej: 3" value={caract.piso || ''} onChange={(e) => onChange('piso', e.target.value)} onKeyDown={blockKeys} onBlur={() => onBlur && onBlur('piso')} />
+          {errors?.piso && <span className="field__error"><AlertCircle size={11} /> {errors.piso}</span>}
+        </div>
+      </div>
+      <div className="form-card">
+        <div className="form-card__header"><span className="form-card__icon"><Star size={16} /></span><h3 className="form-card__title">Amenidades</h3></div>
+        <ChipsGrid items={[{ key: 'balcon', label: 'Balcón' }, { key: 'zona_lavanderia', label: 'Zona lavandería' }, { key: 'cocina_equipada', label: 'Cocina equipada' }, { key: 'deposito', label: 'Depósito' }]} caract={caract} onToggle={onToggle} />
+      </div>
+    </div>
+  )
+}
+
+function LocalForm({ caract, onChange, onToggle, calcArea, errors, onBlur }) {
+  const blockKeys = (e) => { if (['-', 'e', 'E', '+'].includes(e.key)) e.preventDefault() }
+  return (
+    <div className="step-content">
+      <div className="form-card">
+        <div className="form-card__header"><span className="form-card__icon"><Ruler size={16} /></span><h3 className="form-card__title">Dimensiones y área</h3></div>
+        <DimensionCalc caract={caract} onChange={onChange} calcArea={calcArea} errors={errors} onBlur={onBlur} />
+        <div className="field">
+          <label className="field__label">Área total (m²) <span className="field__required">*</span></label>
+          <input className={`field__input ${errors?.area_total ? 'field__input--error' : ''}`} type="number" step="0.01" min="1" placeholder="0" value={caract.area_total || ''} onChange={(e) => onChange('area_total', e.target.value)} onKeyDown={blockKeys} onBlur={() => onBlur && onBlur('area_total')} />
+          {errors?.area_total && <span className="field__error"><AlertCircle size={11} /> {errors.area_total}</span>}
+        </div>
+      </div>
+      <div className="form-card">
+        <div className="form-card__header"><span className="form-card__icon"><Star size={16} /></span><h3 className="form-card__title">Características</h3></div>
+        <ChipsGrid items={[{ key: 'bano_privado', label: 'Baño privado' }, { key: 'mezanine', label: 'Mezanine' }, { key: 'vitrina', label: 'Vitrina' }, { key: 'deposito', label: 'Depósito' }, { key: 'parqueadero', label: 'Parqueadero' }]} caract={caract} onToggle={onToggle} />
+      </div>
+    </div>
+  )
+}
+
+function BodegaForm({ caract, onChange, onToggle, calcArea, errors, onBlur }) {
+  const blockKeys = (e) => { if (['-', 'e', 'E', '+'].includes(e.key)) e.preventDefault() }
+  return (
+    <div className="step-content">
+      <div className="form-card">
+        <div className="form-card__header"><span className="form-card__icon"><Ruler size={16} /></span><h3 className="form-card__title">Dimensiones y área</h3></div>
+        <DimensionCalc caract={caract} onChange={onChange} calcArea={calcArea} errors={errors} onBlur={onBlur} />
+        <div className="field">
+          <label className="field__label">Altura (m) <span className="field__required">*</span></label>
+          <input className={`field__input ${errors?.altura ? 'field__input--error' : ''}`} type="number" step="0.1" min="1" placeholder="0.0" value={caract.altura || ''} onChange={(e) => onChange('altura', e.target.value)} onKeyDown={blockKeys} onBlur={() => onBlur && onBlur('altura')} />
+          {errors?.altura && <span className="field__error"><AlertCircle size={11} /> {errors.altura}</span>}
+        </div>
+      </div>
+      <div className="form-card">
+        <div className="form-card__header"><span className="form-card__icon"><Star size={16} /></span><h3 className="form-card__title">Características</h3></div>
+        <ChipsGrid items={[{ key: 'oficina', label: 'Oficina' }, { key: 'bano', label: 'Baño' }, { key: 'muelle_carga', label: 'Muelle de carga' }, { key: 'parqueadero', label: 'Parqueadero' }, { key: 'vigilancia', label: 'Vigilancia' }]} caract={caract} onToggle={onToggle} />
+      </div>
+    </div>
+  )
+}
+
+function FincaForm({ caract, onChange, onToggle, errors, onBlur }) {
+  const blockKeys = (e) => { if (['-', 'e', 'E', '+'].includes(e.key)) e.preventDefault() }
+  return (
+    <div className="step-content">
+      <div className="form-card">
+        <div className="form-card__header"><span className="form-card__icon"><Ruler size={16} /></span><h3 className="form-card__title">Dimensiones</h3></div>
+        <div className="field">
+          <label className="field__label">Área total (m² o hectáreas) <span className="field__required">*</span></label>
+          <input className={`field__input ${errors?.area_total ? 'field__input--error' : ''}`} type="number" step="0.01" min="1" placeholder="0" value={caract.area_total || ''} onChange={(e) => onChange('area_total', e.target.value)} onKeyDown={blockKeys} onBlur={() => onBlur && onBlur('area_total')} />
+          {errors?.area_total && <span className="field__error"><AlertCircle size={11} /> {errors.area_total}</span>}
+        </div>
+        <div className="field">
+          <label className="field__label">Área construida (m²) <span className="field__required">*</span></label>
+          <input className={`field__input ${errors?.area_construida ? 'field__input--error' : ''}`} type="number" step="0.01" min="1" placeholder="0" value={caract.area_construida || ''} onChange={(e) => onChange('area_construida', e.target.value)} onKeyDown={blockKeys} onBlur={() => onBlur && onBlur('area_construida')} />
+          {errors?.area_construida && <span className="field__error"><AlertCircle size={11} /> {errors.area_construida}</span>}
+        </div>
+      </div>
+      <div className="form-card">
+        <div className="form-card__header"><span className="form-card__icon"><Star size={16} /></span><h3 className="form-card__title">Características</h3></div>
+        <ChipsGrid items={[{ key: 'piscina', label: 'Piscina' }, { key: 'lago', label: 'Lago' }, { key: 'rio', label: 'Río' }, { key: 'cultivos', label: 'Cultivos' }, { key: 'ganado', label: 'Ganado' }, { key: 'casa_principal', label: 'Casa principal' }, { key: 'casa_trabajadores', label: 'Casa trabajadores' }, { key: 'establo', label: 'Establo' }, { key: 'corral', label: 'Corral' }]} caract={caract} onToggle={onToggle} />
+      </div>
+    </div>
+  )
+}
+
+function LoteForm({ caract, onChange, onToggle, calcArea, errors, onBlur }) {
+  const blockKeys = (e) => { if (['-', 'e', 'E', '+'].includes(e.key)) e.preventDefault() }
+  return (
+    <div className="step-content">
+      <div className="form-card">
+        <div className="form-card__header"><span className="form-card__icon"><Ruler size={16} /></span><h3 className="form-card__title">Dimensiones y área</h3></div>
+        <DimensionCalc caract={caract} onChange={onChange} calcArea={calcArea} showAreaConstruida={false} errors={errors} onBlur={onBlur} />
+        <div className="field">
+          <label className="field__label">Área total (m²) <span className="field__required">*</span></label>
+          <input className={`field__input ${errors?.area_total ? 'field__input--error' : ''}`} type="number" step="0.01" min="1" placeholder="0" value={caract.area_total || ''} onChange={(e) => onChange('area_total', e.target.value)} onKeyDown={blockKeys} onBlur={() => onBlur && onBlur('area_total')} />
+          {errors?.area_total && <span className="field__error"><AlertCircle size={11} /> {errors.area_total}</span>}
+        </div>
+      </div>
+      <div className="form-card">
+        <div className="form-card__header"><span className="form-card__icon"><Star size={16} /></span><h3 className="form-card__title">Características del terreno</h3></div>
+        <ChipsGrid items={[{ key: 'esquinero', label: 'Esquinero' }, { key: 'plano', label: 'Plano' }, { key: 'inclinado', label: 'Inclinado' }, { key: 'servicios_publicos', label: 'Servicios públicos' }, { key: 'escrituras', label: 'Escrituras' }]} caract={caract} onToggle={onToggle} />
+      </div>
+    </div>
+  )
+}
