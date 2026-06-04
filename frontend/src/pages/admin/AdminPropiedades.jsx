@@ -3,6 +3,7 @@ import { Building2, Plus, Eye, Edit2, EyeOff, Trash2, Search, FileText, Clock, C
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../config/api'
 import PropertyDetailModal from '../../components/admin/shared/PropertyDetailModal'
+import PropertyFullDetailModal from '../../components/admin/shared/PropertyFullDetailModal'
 import PropertyEditModal from '../../components/admin/shared/PropertyEditModal'
 
 export default function AdminPropiedades() {
@@ -228,8 +229,9 @@ export default function AdminPropiedades() {
 
       {/* Detail Modal */}
       {detailModal && (
-        <PropertyDetailModal
+        <PropertyFullDetailModal
           property={detailModal}
+          usuario={detailModal.usuarios}
           onClose={() => setDetailModal(null)}
           onEdit={(p) => { setDetailModal(null); setEditModal(p) }}
         />

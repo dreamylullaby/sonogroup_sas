@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { FileText, Eye, Check, X, MapPin, Trash2, User, AlertTriangle } from 'lucide-react'
 import { api } from '../../config/api'
-import SolicitudDetailModal from '../../components/admin/shared/SolicitudDetailModal'
+import PropertyFullDetailModal from '../../components/admin/shared/PropertyFullDetailModal'
 
 export default function AdminSolicitudes() {
   const [solicitudes, setSolicitudes] = useState([])
@@ -88,11 +88,30 @@ export default function AdminSolicitudes() {
 
       {/* Detail Modal */}
       {detailModal && (
-        <SolicitudDetailModal
-          solicitud={detailModal}
+        <PropertyFullDetailModal
+          property={{
+            ...detailModal.datos,
+            id_inmueble: detailModal.id_solicitud,
+            estado_aprobacion: detailModal.estado_aprobacion,
+            fecha_registro: detailModal.fecha_solicitud,
+            caracteristicas: detailModal.datos?.caracteristicas || {},
+            ubicaciones: detailModal.datos?.ubicacion || {}
+          }}
+          usuario={detailModal.usuarios}
+          title={`Solicitud #${detailModal.id_solicitud}`}
           onClose={() => setDetailModal(null)}
-          onAprobar={handleAprobar}
-          onRechazar={(id) => { setDetailModal(null); setRechazoModal(solicitudes.find(s => s.id_solicitud === id)); setMotivoRechazo('') }}
+          headerActions={
+            detailModal.estado_aprobacion === 'pendiente' ? (
+              <>
+                <button className="admin-btn admin-btn--success admin-btn--sm" onClick={() => handleAprobar(detailModal.id_solicitud)}>
+                  <Check size={12} /> Aprobar
+                </button>
+                <button className="admin-btn admin-btn--danger admin-btn--sm" onClick={() => { setDetailModal(null); setRechazoModal(detailModal); setMotivoRechazo('') }}>
+                  <X size={12} /> Rechazar
+                </button>
+              </>
+            ) : null
+          }
         />
       )}
 
