@@ -76,7 +76,7 @@ function mapearCaracteristicas(tipo, caract, servicios = {}) {
                 ascensor: c.ascensor || false,
                 vigilancia: c.vigilancia || false,
                 vigilancia_valor: c.vigilancia ? (c.vigilancia_valor || c.valor_vigilancia || null) : null,
-                zonas_comunes: c.zona_social || c.zonas_comunes || '[]',
+                zonas_comunes: Array.isArray(c.zonas_comunes) ? c.zonas_comunes : (c.zona_social || []),
                 descripcion_acabados: c.descripcion_acabados || null
             };
         case 'apartaestudio':
@@ -158,10 +158,12 @@ function mapearCaracteristicas(tipo, caract, servicios = {}) {
                 frente: c.frente || null,
                 fondo: c.fondo || null,
                 topografia: c.topografia || null,
-                pendiente: c.pendiente || false,
+                pendiente: c.pendiente === true ? true : (c.pendiente === false ? false : null),
                 tipo_via_acceso: c.vias_acceso || c.tipo_via_acceso || null,
                 descripcion_via: c.descripcion_via || null,
-                servicios_disponibles: serviciosLista.length > 0 ? serviciosLista : [],
+                servicios_disponibles: Array.isArray(c.servicios_disponibles) && c.servicios_disponibles.length > 0
+                    ? c.servicios_disponibles
+                    : (serviciosLista.length > 0 ? serviciosLista : []),
                 uso_pot: c.uso_suelo || c.uso_pot || null,
                 tiene_documento: c.tiene_documento || false,
                 tiene_casa: c.tiene_casa || false

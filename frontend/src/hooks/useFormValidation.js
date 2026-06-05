@@ -12,8 +12,15 @@ const validationConfig = {
   step2: {
     valor: {
       required: true,
-      validate: (v) => !v || parseFloat(v) <= 0,
-      message: 'Ingresa un precio válido mayor a $0'
+      validate: (v) => {
+        if (!v || String(v).trim() === '') return true
+        const num = Number(v)
+        if (num <= 0) return true
+        if (num < 200000) return true
+        if (num > 50000000000) return true
+        return false
+      },
+      message: 'El precio mínimo es $200.000'
     },
     valor_administracion: {
       required: true,
@@ -30,26 +37,26 @@ const validationConfig = {
       validate: (v) => {
         if (!v || v.trim().length === 0) return true
         if (v.trim().length < 10) return true
+        if (v.trim().length > 2000) return true
         return false
       },
       message: 'El título debe tener al menos 10 caracteres'
     },
     estado_inmueble: {
       required: true,
-      message: 'Selecciona el estado del inmueble'
+      message: 'Selecciona una opción válida'
     },
     zona: {
       required: true,
-      message: 'Selecciona la zona del inmueble'
+      message: 'Selecciona una opción válida'
     },
     estrato: {
       required: true,
       validate: (v) => {
-        // 'no_aplica' is a valid selection, only empty/null/undefined is invalid
         if (v === '' || v === undefined || v === null) return true
         return false
       },
-      message: 'Selecciona una opción'
+      message: 'Selecciona una opción válida'
     }
   },
   step3: {
@@ -58,42 +65,40 @@ const validationConfig = {
       validate: (v) => {
         if (!v || v.trim().length === 0) return true
         if (v.trim().length < 3) return true
-        // Solo letras, espacios, tildes, apóstrofe y guion
         if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s''-]+$/.test(v.trim())) return true
         return false
       },
-      message: 'Municipio debe tener al menos 3 caracteres y solo letras'
+      message: 'Ingresa el municipio o ciudad'
     },
     departamento: {
       required: true,
       validate: (v) => {
         if (!v || v.trim().length === 0) return true
-        if (v.trim().length < 3) return true
         return false
       },
-      message: 'Selecciona un país válido'
+      message: 'Selecciona el departamento'
     },
     barrio_vereda: {
       required: true,
       validate: (v) => {
         if (!v || v.trim().length === 0) return true
         if (v.trim().length < 3) return true
-        // Letras, números, espacios y guion
-        if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9\s\-]+$/.test(v.trim())) return true
+        if (v.trim().length > 100) return true
+        if (!/^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ0-9\s\-]+$/.test(v.trim())) return true
         return false
       },
-      message: 'Barrio/Vereda debe tener al menos 3 caracteres (letras, números y espacios)'
+      message: 'El barrio o vereda debe tener al menos 3 caracteres'
     },
     direccion: {
       required: true,
       validate: (v) => {
         if (!v || v.trim().length === 0) return true
         if (v.trim().length < 8) return true
-        // Letras, números, espacios y caracteres comunes de dirección: # . , - / No. °
-        if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9\s#.,\-\/°]+$/.test(v.trim())) return true
+        if (v.trim().length > 200) return true
+        if (!/^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ0-9\s#.,\-\/]+$/.test(v.trim())) return true
         return false
       },
-      message: 'Dirección debe tener al menos 8 caracteres (Ej: Calle 18 # 24-56)'
+      message: 'La dirección debe tener al menos 8 caracteres'
     }
   }
   // step4 is dynamic — handled via getStep4Config

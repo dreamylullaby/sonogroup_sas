@@ -156,10 +156,12 @@ function mapearCaracteristicas(tipo, caract, servicios = {}) {
                 frente: c.frente || null,
                 fondo: c.fondo || null,
                 topografia: c.topografia || null,
-                pendiente: c.pendiente || false,
+                pendiente: c.pendiente === true ? true : (c.pendiente === false ? false : null),
                 tipo_via_acceso: c.vias_acceso || c.tipo_via_acceso || null,
                 descripcion_via: c.descripcion_via || null,
-                servicios_disponibles: serviciosLista.length > 0 ? serviciosLista : [],
+                servicios_disponibles: Array.isArray(c.servicios_disponibles) && c.servicios_disponibles.length > 0
+                    ? c.servicios_disponibles
+                    : (serviciosLista.length > 0 ? serviciosLista : []),
                 uso_pot: c.uso_suelo || c.uso_pot || null,
                 tiene_documento: c.tiene_documento || false,
                 tiene_casa: c.tiene_casa || false
