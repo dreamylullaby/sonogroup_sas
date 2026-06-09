@@ -1432,3 +1432,153 @@ ON CONFLICT (id) DO NOTHING;
 -- [RUIDO] idx_keep_alive_last_ping eliminado
 --   Tabla singleton (1 fila) → índice inútil para el planner
 -- ============================================================
+
+
+-- ============================================================
+-- EXTENSIONES POST v3.4 — Migraciones aplicadas en producción
+-- Fecha: Junio 2026
+-- ============================================================
+--
+-- Estas migraciones se ejecutaron sobre la BD v3.4 ya en uso.
+-- No forman parte del script destructivo original (que hace DROP).
+-- Se documentan aquí para tener un registro completo del esquema.
+-- ============================================================
+
+
+-- ────────────────────────────────────────────────────────────
+-- EXT 1: BORRADORES DE INMUEBLES
+-- Permite guardar formularios incompletos en servidor.
+-- Límite por rol enforced en backend: cliente=1, admin=5.
+-- ────────────────────────────────────────────────────────────
+
+CREATE TABLE borradores_inmuebles (
+    id_borrador             SERIAL          PRIMARY KEY,
+    id_usuario              INTEGER         NOT NULL
+                                            REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+    titulo                  VARCHAR(100),
+    datos                   JSONB           NOT NULL,
+    paso_actual             SMALLINT        DEFAULT 1,
+    fecha_creacion          TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion     TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT chk_borrador_paso CHECK (paso_actual BETWEEN 1 AND 4)
+);
+
+COMMENT ON TABLE  borradores_inmuebles IS 'Borradores de publicación. Límite por rol enforced en app: cliente=1, admin=5.';
+COMMENT ON COLUMN borradores_inmuebles.datos IS 'Snapshot JSONB: {formData, ubicacion, servicios, caract}.';
+COMMENT ON COLUMN borradores_inmuebles.paso_actual IS 'Último paso alcanzado (1-4).';
+COMMENT ON COLUMN borradores_inmuebles.titulo IS 'Identificador visual para admins con múltiples borradores.';
+
+CREATE INDEX idx_borradores_usuario
+    ON borradores_inmuebles (id_usuario, fecha_actualizacion DESC);
+
+CREATE TRIGGER trg_actualizar_borrador
+    BEFORE UPDATE ON borradores_inmuebles
+    FOR EACH ROW EXECUTE FUNCTION fn_actualizar_fecha_actualizacion();
+
+
+-- ────────────────────────────────────────────────────────────
+-- EXT 2: ENUM tipo_sala_comedor — valor 'separados'
+-- Sala y comedor como espacios independientes.
+-- ────────────────────────────────────────────────────────────
+
+-- ALTER TYPE tipo_sala_comedor ADD VALUE 'separados';
+-- (Ya ejecutado. Documentado aquí para referencia.)
+
+
+-- ────────────────────────────────────────────────────────────
+-- EXT 3: TRIGGER NOTIFICACIÓN FAVORITOS
+-- Notifica a usuarios cuando cambia precio o se desactiva
+-- una propiedad que tienen en favoritos.
+-- ────────────────────────────────────────────────────────────
+
+CREATE OR REPLACE FUNCTION fn_notificar_cambio_favorito()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    IF OLD.valor IS DISTINCT FROM NEW.valor THEN
+        INSERT INTO notificaciones (id_usuario, tipo, titulo, mensaje, id_inmueble)
+        SELECT f.id_usuario, 'favorito',
+               'Cambio de precio en propiedad guardada',
+               'Una propiedad en tus favoritos cambió de precio: $' ||
+               trim(to_char(OLD.valor, '999,999,999,999')) || ' → $' ||
+               trim(to_char(NEW.valor, '999,999,999,999')),
+               NEW.id_inmueble
+        FROM favoritos f
+        WHERE f.id_inmueble = NEW.id_inmueble;
+    END IF;
+
+    IF OLD.activo = true AND NEW.activo = false THEN
+        INSERT INTO notificaciones (id_usuario, tipo, titulo, mensaje, id_inmueble)
+        SELECT f.id_usuario, 'favorito',
+               'Propiedad ya no disponible',
+               'Una propiedad en tus favoritos ha sido retirada del portafolio.',
+               NEW.id_inmueble
+        FROM favoritos f
+        WHERE f.id_inmueble = NEW.id_inmueble;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION fn_notificar_cambio_favorito IS
+'Notifica a usuarios con favoritos cuando cambia precio o se desactiva un inmueble.';
+
+CREATE TRIGGER trg_notificar_cambio_favorito
+    AFTER UPDATE OF valor, activo ON inmuebles
+    FOR EACH ROW
+    EXECUTE FUNCTION fn_notificar_cambio_favorito();
+
+
+-- ────────────────────────────────────────────────────────────
+-- EXT 4: ESTADOS AMPLIADOS PARA SOLICITUDES
+-- Nuevos estados: recibido, resuelto, no_resuelto
+-- Nuevas columnas para tracking y reenvío de solicitudes.
+-- ────────────────────────────────────────────────────────────
+
+-- Enum ampliado (ejecutar en paso separado por restricción PostgreSQL):
+-- ALTER TYPE estado_aprobacion ADD VALUE IF NOT EXISTS 'recibido';
+-- ALTER TYPE estado_aprobacion ADD VALUE IF NOT EXISTS 'resuelto';
+-- ALTER TYPE estado_aprobacion ADD VALUE IF NOT EXISTS 'no_resuelto';
+-- ALTER TYPE tipo_notificacion ADD VALUE IF NOT EXISTS 'solicitud';
+
+-- Columnas nuevas en solicitudes_publicacion:
+ALTER TABLE solicitudes_publicacion
+ADD COLUMN IF NOT EXISTS fecha_vista TIMESTAMP,
+ADD COLUMN IF NOT EXISTS fecha_resolucion TIMESTAMP,
+ADD COLUMN IF NOT EXISTS id_solicitud_origen INTEGER
+    REFERENCES solicitudes_publicacion(id_solicitud) ON DELETE SET NULL,
+ADD COLUMN IF NOT EXISTS tipo_solicitud VARCHAR(20) DEFAULT 'publicacion',
+ADD COLUMN IF NOT EXISTS snapshot_datos_rechazo JSONB,
+ADD COLUMN IF NOT EXISTS fecha_rechazo TIMESTAMP;
+
+COMMENT ON COLUMN solicitudes_publicacion.fecha_vista IS 'Timestamp de cuando el admin vio la solicitud (estado → recibido).';
+COMMENT ON COLUMN solicitudes_publicacion.fecha_resolucion IS 'Timestamp de resolución final (resuelto/no_resuelto).';
+COMMENT ON COLUMN solicitudes_publicacion.id_solicitud_origen IS 'FK a la solicitud original cuando es un reenvío.';
+COMMENT ON COLUMN solicitudes_publicacion.tipo_solicitud IS 'publicacion | edicion. Discriminador de tipo de solicitud.';
+COMMENT ON COLUMN solicitudes_publicacion.snapshot_datos_rechazo IS 'Snapshot de datos al momento del rechazo, para comparar cambios en reenvío.';
+COMMENT ON COLUMN solicitudes_publicacion.fecha_rechazo IS 'Timestamp del rechazo.';
+
+-- Índice para buscar solicitudes de edición por inmueble
+CREATE INDEX IF NOT EXISTS idx_solicitudes_pub_tipo_inmueble
+    ON solicitudes_publicacion (id_inmueble, tipo_solicitud, estado_aprobacion)
+    WHERE tipo_solicitud = 'edicion';
+
+-- Índice para cron de solicitudes sin resolver
+CREATE INDEX IF NOT EXISTS idx_solicitudes_pub_estado_fecha
+    ON solicitudes_publicacion (estado_aprobacion, fecha_solicitud)
+    WHERE estado_aprobacion IN ('pendiente', 'recibido');
+
+
+-- ============================================================
+-- RESUMEN COMPLETO DEL ESQUEMA (v3.4 + extensiones)
+-- ============================================================
+-- Tablas    : 26  (+1: borradores_inmuebles)
+-- Índices   : 44  (+3: borradores_usuario, solicitudes_tipo_inmueble,
+--                      solicitudes_estado_fecha)
+-- Tipos     : 19  (+0 nuevos tipos, pero valores añadidos a:
+--                  tipo_sala_comedor, estado_aprobacion, tipo_notificacion)
+-- Funciones : 10  (+1: fn_notificar_cambio_favorito)
+-- Triggers  : 9   (+2: trg_actualizar_borrador, trg_notificar_cambio_favorito)
+-- Vistas    : 3   (sin cambios)
+-- ============================================================
