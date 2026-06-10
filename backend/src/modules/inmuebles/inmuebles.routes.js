@@ -482,6 +482,26 @@ router.put('/:id', verificarToken, async (req, res) => {
             return res.status(403).json({ error: 'No tienes permisos para modificar este inmueble' });
         }
 
+        // Si no es admin, verificar que tenga solicitud de edición aprobada
+        if (req.usuario.rol !== 'admin') {
+            const { data: solicitudEdicion } = await supabase
+                .from('solicitudes_publicacion')
+                .select('id_solicitud')
+                .eq('id_usuario', req.usuario.id_usuario)
+                .eq('id_inmueble', id)
+                .eq('tipo_solicitud', 'edicion')
+                .eq('estado_aprobacion', 'aprobado')
+                .limit(1)
+                .maybeSingle();
+
+            if (!solicitudEdicion) {
+                return res.status(403).json({
+                    error: 'Necesitas una solicitud de edición aprobada para modificar este inmueble',
+                    codigo: 'EDICION_NO_APROBADA'
+                });
+            }
+        }
+
         // 1. Actualizar tabla inmuebles (solo campos que existen en la tabla)
         const datosInmueble = {};
         if (valor !== undefined) datosInmueble.valor = parseFloat(valor);

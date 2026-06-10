@@ -1,7 +1,29 @@
 import { useState, useEffect } from 'react'
-import { FileText, Eye, Check, X, MapPin, Trash2, User, AlertTriangle } from 'lucide-react'
+import { FileText, Eye, Check, X, MapPin, Trash2, User, AlertTriangle, RefreshCw, CheckCircle, Clock, Inbox } from 'lucide-react'
 import { api } from '../../config/api'
 import PropertyFullDetailModal from '../../components/admin/shared/PropertyFullDetailModal'
+
+const ESTADO_CONFIG = {
+  pendiente: { label: 'Pendiente', color: '#D97706', bg: '#FEF3C7' },
+  recibido: { label: 'Recibido', color: '#2563EB', bg: '#DBEAFE' },
+  aprobado: { label: 'Aprobado', color: '#059669', bg: '#D1FAE5' },
+  rechazado: { label: 'Rechazado', color: '#DC2626', bg: '#FEE2E2' },
+  resuelto: { label: 'Resuelto', color: '#059669', bg: '#D1FAE5' },
+  no_resuelto: { label: 'No resuelto', color: '#DC2626', bg: '#FEE2E2' }
+}
+
+function EstadoBadge({ estado }) {
+  const config = ESTADO_CONFIG[estado] || ESTADO_CONFIG.pendiente
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: '4px',
+      padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 600,
+      color: config.color, background: config.bg, textTransform: 'uppercase', letterSpacing: '0.03em'
+    }}>
+      {config.label}
+    </span>
+  )
+}
 
 export default function AdminSolicitudes() {
   const [solicitudes, setSolicitudes] = useState([])
@@ -9,6 +31,7 @@ export default function AdminSolicitudes() {
   const [detailModal, setDetailModal] = useState(null)
   const [rechazoModal, setRechazoModal] = useState(null)
   const [motivoRechazo, setMotivoRechazo] = useState('')
+  const [filtroEstado, setFiltroEstado] = useState('pendiente')
 
   const fetchData = () => {
     setLoading(true)
@@ -31,41 +54,107 @@ export default function AdminSolicitudes() {
     fetchData()
   }
 
+  const handleResolver = async (id) => {
+    await api.put(`/api/propiedades-pendientes/${id}/resolver`)
+    setDetailModal(null)
+    fetchData()
+  }
+
   const handleEliminar = async (id) => {
     if (!window.confirm('Eliminar esta solicitud permanentemente?')) return
     await api.delete(`/api/propiedades-pendientes/${id}`)
     fetchData()
   }
 
-  const pendientes = solicitudes.filter(s => s.estado_aprobacion === 'pendiente')
+  // Marcar como recibido al abrir detalle
+  const handleOpenDetail = async (solicitud) => {
+    setDetailModal(solicitud)
+    if (solicitud.estado_aprobacion === 'pendiente') {
+      try {
+        await api.put(`/api/propiedades-pendientes/${solicitud.id_solicitud}/recibido`)
+        // Actualizar localmente
+        setSolicitudes(prev => prev.map(s =>
+          s.id_solicitud === solicitud.id_solicitud
+            ? { ...s, estado_aprobacion: 'recibido' }
+            : s
+        ))
+      } catch (e) { /* silencioso */ }
+    }
+  }
+
+  const filtradas = filtroEstado === 'todas'
+    ? solicitudes
+    : solicitudes.filter(s => s.estado_aprobacion === filtroEstado)
+
+  const conteos = {
+    pendiente: solicitudes.filter(s => s.estado_aprobacion === 'pendiente').length,
+    recibido: solicitudes.filter(s => s.estado_aprobacion === 'recibido').length,
+    no_resuelto: solicitudes.filter(s => s.estado_aprobacion === 'no_resuelto').length,
+  }
 
   return (
     <div>
       <div className="admin-page__header">
         <h1 className="admin-page__title">Solicitudes</h1>
-        <p className="admin-page__subtitle">Revisa solicitudes de publicacion · <span style={{ color: '#6B3FA0', fontWeight: 600 }}>{pendientes.length} pendientes</span></p>
+        <p className="admin-page__subtitle">
+          Gestiona solicitudes de publicación y edición ·
+          <span style={{ color: '#D97706', fontWeight: 600 }}> {conteos.pendiente} pendientes</span>
+          {conteos.recibido > 0 && <span style={{ color: '#2563EB', fontWeight: 600 }}> · {conteos.recibido} recibidas</span>}
+          {conteos.no_resuelto > 0 && <span style={{ color: '#DC2626', fontWeight: 600 }}> · {conteos.no_resuelto} sin resolver</span>}
+        </p>
+      </div>
+
+      {/* Filtros */}
+      <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', flexWrap: 'wrap' }}>
+        {[
+          { key: 'pendiente', label: 'Pendientes', icon: <Clock size={11} /> },
+          { key: 'recibido', label: 'Recibidas', icon: <Inbox size={11} /> },
+          { key: 'no_resuelto', label: 'No resueltas', icon: <AlertTriangle size={11} /> },
+          { key: 'resuelto', label: 'Resueltas', icon: <CheckCircle size={11} /> },
+          { key: 'todas', label: 'Todas', icon: <FileText size={11} /> },
+        ].map(f => (
+          <button
+            key={f.key}
+            onClick={() => setFiltroEstado(f.key)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '4px',
+              padding: '5px 12px', fontSize: '11px', fontWeight: 500,
+              border: filtroEstado === f.key ? '1px solid #6B3FA0' : '1px solid #e0d8ec',
+              background: filtroEstado === f.key ? '#F3EEFF' : '#fff',
+              color: filtroEstado === f.key ? '#6B3FA0' : '#5A4864',
+              borderRadius: '16px', cursor: 'pointer'
+            }}
+          >
+            {f.icon} {f.label}
+          </button>
+        ))}
       </div>
 
       <div className="admin-card">
         {loading ? (
           <div className="admin-card__empty"><p>Cargando...</p></div>
-        ) : pendientes.length === 0 ? (
-          <div className="admin-card__empty"><FileText size={32} /><p>No hay solicitudes pendientes</p><p className="sub">Las nuevas solicitudes apareceran aqui</p></div>
+        ) : filtradas.length === 0 ? (
+          <div className="admin-card__empty"><FileText size={32} /><p>No hay solicitudes en este estado</p></div>
         ) : (
           <div className="admin-card__body">
-            {pendientes.map(s => {
+            {filtradas.map(s => {
               const d = s.datos || {}
               const usuario = s.usuarios || {}
               return (
                 <div key={s.id_solicitud} className="admin-list-item">
                   <div className="admin-list-item__content">
                     <div className="admin-list-item__title">
-                      <span className="admin-badge admin-badge--venta" style={{ marginRight: '0.5rem' }}>{d.tipo_inmueble || 'propiedad'}</span>
-                      {d.tipo_operacion === 'arriendo' ? 'Arriendo' : 'Venta'}
+                      <EstadoBadge estado={s.estado_aprobacion} />
+                      {s.tipo_solicitud === 'edicion' && (
+                        <span style={{ marginLeft: '4px', padding: '2px 6px', borderRadius: '8px', fontSize: '9px', fontWeight: 600, background: '#EDE9FE', color: '#7C3AED' }}>EDICIÓN</span>
+                      )}
+                      <span style={{ marginLeft: '0.5rem' }}>
+                        {d.tipo_inmueble || 'propiedad'} — {d.tipo_operacion === 'arriendo' ? 'Arriendo' : 'Venta'}
+                      </span>
                     </div>
                     <div className="admin-list-item__meta">
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                        <User size={10} /> {usuario.nombre || 'Usuario desconocido'}
+                        <User size={10} /> {usuario.nombre || 'Usuario'}
                       </span>
                       {usuario.email && <span style={{ color: '#8097B7' }}>{usuario.email}</span>}
                       <span><MapPin size={10} style={{ display: 'inline', verticalAlign: 'middle' }} /> {d.ubicacion?.municipio || 'Sin ubicacion'}</span>
@@ -74,10 +163,15 @@ export default function AdminSolicitudes() {
                     </div>
                   </div>
                   <div className="admin-list-item__actions">
-                    <button className="admin-btn admin-btn--ghost" title="Ver detalles" onClick={() => setDetailModal(s)}><Eye size={13} /></button>
-                    <button className="admin-btn admin-btn--success admin-btn--sm" onClick={() => handleAprobar(s.id_solicitud)}><Check size={12} /> Aprobar</button>
-                    <button className="admin-btn admin-btn--danger admin-btn--sm" onClick={() => { setRechazoModal(s); setMotivoRechazo('') }}><X size={12} /> Rechazar</button>
-                    <button className="admin-btn admin-btn--ghost admin-btn--sm" title="Eliminar solicitud" style={{ color: '#CC1E2B' }} onClick={() => handleEliminar(s.id_solicitud)}><Trash2 size={12} /></button>
+                    <button className="admin-btn admin-btn--ghost" title="Ver detalles" onClick={() => handleOpenDetail(s)}><Eye size={13} /></button>
+                    {['pendiente', 'recibido'].includes(s.estado_aprobacion) && (
+                      <>
+                        <button className="admin-btn admin-btn--success admin-btn--sm" onClick={() => handleAprobar(s.id_solicitud)}><Check size={12} /> Aprobar</button>
+                        <button className="admin-btn admin-btn--danger admin-btn--sm" onClick={() => { setRechazoModal(s); setMotivoRechazo('') }}><X size={12} /> Rechazar</button>
+                        <button className="admin-btn admin-btn--ghost admin-btn--sm" title="Marcar resuelto" style={{ color: '#059669' }} onClick={() => handleResolver(s.id_solicitud)}><CheckCircle size={12} /></button>
+                      </>
+                    )}
+                    <button className="admin-btn admin-btn--ghost admin-btn--sm" title="Eliminar" style={{ color: '#CC1E2B' }} onClick={() => handleEliminar(s.id_solicitud)}><Trash2 size={12} /></button>
                   </div>
                 </div>
               )
@@ -98,16 +192,19 @@ export default function AdminSolicitudes() {
             ubicaciones: detailModal.datos?.ubicacion || {}
           }}
           usuario={detailModal.usuarios}
-          title={`Solicitud #${detailModal.id_solicitud}`}
+          title={`Solicitud #${detailModal.id_solicitud}${detailModal.tipo_solicitud === 'edicion' ? ' (Edición)' : ''}`}
           onClose={() => setDetailModal(null)}
           headerActions={
-            detailModal.estado_aprobacion === 'pendiente' ? (
+            ['pendiente', 'recibido'].includes(detailModal.estado_aprobacion) ? (
               <>
                 <button className="admin-btn admin-btn--success admin-btn--sm" onClick={() => handleAprobar(detailModal.id_solicitud)}>
                   <Check size={12} /> Aprobar
                 </button>
                 <button className="admin-btn admin-btn--danger admin-btn--sm" onClick={() => { setDetailModal(null); setRechazoModal(detailModal); setMotivoRechazo('') }}>
                   <X size={12} /> Rechazar
+                </button>
+                <button className="admin-btn admin-btn--ghost admin-btn--sm" style={{ color: '#059669', border: '1px solid #059669' }} onClick={() => handleResolver(detailModal.id_solicitud)}>
+                  <CheckCircle size={12} /> Resuelto
                 </button>
               </>
             ) : null

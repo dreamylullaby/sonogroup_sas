@@ -56,11 +56,14 @@ const MyProperties = () => {
 
   const estadoBadge = (estado) => {
     const map = {
-      pendiente: { label: t('pendiente'), cls: 'badge-pendiente' },
-      aprobado: { label: t('aprobado'), cls: 'badge-aprobado' },
-      rechazado: { label: t('rechazado'), cls: 'badge-rechazado' }
+      pendiente: { label: t('pendiente'), cls: 'badge-pendiente', color: '#D97706', bg: '#FEF3C7' },
+      recibido: { label: 'Recibido', cls: 'badge-recibido', color: '#2563EB', bg: '#DBEAFE' },
+      aprobado: { label: t('aprobado'), cls: 'badge-aprobado', color: '#059669', bg: '#D1FAE5' },
+      rechazado: { label: t('rechazado'), cls: 'badge-rechazado', color: '#DC2626', bg: '#FEE2E2' },
+      resuelto: { label: 'Resuelto', cls: 'badge-resuelto', color: '#059669', bg: '#D1FAE5' },
+      no_resuelto: { label: 'No resuelto', cls: 'badge-no-resuelto', color: '#DC2626', bg: '#FEE2E2' }
     }
-    return map[estado] || { label: estado, cls: '' }
+    return map[estado] || { label: estado, cls: '', color: '#666', bg: '#eee' }
   }
 
   if (loading) return (
@@ -153,6 +156,9 @@ const MyProperties = () => {
                       <div className="sol-tipo">
                         <span>{datos.tipo_inmueble || '—'}</span>
                         <span className="sol-op">{datos.tipo_operacion || ''}</span>
+                        {s.tipo_solicitud === 'edicion' && (
+                          <span style={{ marginLeft: '6px', padding: '1px 6px', borderRadius: '6px', fontSize: '9px', fontWeight: 600, background: '#EDE9FE', color: '#7C3AED' }}>EDICIÓN</span>
+                        )}
                       </div>
                       <p className="sol-precio">{datos.valor ? formatPrecio(datos.valor) : '—'}</p>
                       <p className="sol-ubicacion">
@@ -165,9 +171,15 @@ const MyProperties = () => {
                       <p className="sol-fecha">{t('enviado')} {formatFecha(s.fecha_solicitud)}</p>
                     </div>
                     <div className="sol-estado">
-                      <span className={`estado-badge ${badge.cls}`}>{badge.label}</span>
+                      <span className={`estado-badge ${badge.cls}`} style={{ color: badge.color, background: badge.bg, padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 600 }}>
+                        {badge.label}
+                      </span>
                       {s.estado_aprobacion === 'rechazado' && s.motivo_rechazo && (
                         <p className="sol-motivo">{t('motivo')} {s.motivo_rechazo}</p>
+                      )}
+                      {/* Botón reenviar para no_resuelto o rechazado */}
+                      {['no_resuelto', 'rechazado'].includes(s.estado_aprobacion) && (
+                        <ReenviarButton solicitud={s} onSuccess={cargarDatos} />
                       )}
                     </div>
                   </div>
@@ -207,5 +219,66 @@ const MyProperties = () => {
 }
 
 export default MyProperties
+
+// Componente para botón de reenvío con verificación de cambios
+function ReenviarButton({ solicitud, onSuccess }) {
+  const [checking, setChecking] = useState(false)
+  const [hayCambios, setHayCambios] = useState(null)
+  const [camposModificados, setCamposModificados] = useState([])
+  const [sending, setSending] = useState(false)
+
+  useEffect(() => {
+    // Solo verificar cambios para solicitudes rechazadas con snapshot
+    if (solicitud.estado_aprobacion === 'rechazado') {
+      setChecking(true)
+      api.get(`/api/propiedades-pendientes/${solicitud.id_solicitud}/verificar-cambios`)
+        .then(res => {
+          setHayCambios(res.data.hayCambios)
+          setCamposModificados(res.data.camposModificados || [])
+        })
+        .catch(() => setHayCambios(true)) // En caso de error, permitir reenvío
+        .finally(() => setChecking(false))
+    } else {
+      // Para no_resuelto, siempre permitir
+      setHayCambios(true)
+    }
+  }, [solicitud])
+
+  const handleReenviar = async () => {
+    setSending(true)
+    try {
+      await api.post(`/api/propiedades-pendientes/${solicitud.id_solicitud}/reenviar`)
+      onSuccess()
+    } catch (err) {
+      alert(parseApiError(err))
+    } finally {
+      setSending(false)
+    }
+  }
+
+  if (checking) {
+    return <p style={{ fontSize: '11px', color: '#8097B7', marginTop: '6px' }}>Verificando...</p>
+  }
+
+  const disabled = hayCambios === false
+  const title = disabled ? 'Debes realizar cambios antes de reenviar' : 'Reenviar solicitud para revisión'
+
+  return (
+    <button
+      onClick={handleReenviar}
+      disabled={disabled || sending}
+      title={title}
+      style={{
+        marginTop: '8px', padding: '5px 12px', fontSize: '11px', fontWeight: 500,
+        background: disabled ? '#e0d8ec' : '#6B3FA0',
+        color: disabled ? '#8097B7' : '#fff',
+        border: 'none', borderRadius: '8px',
+        cursor: disabled ? 'not-allowed' : 'pointer'
+      }}
+    >
+      {sending ? 'Reenviando...' : disabled ? '⚠ Realiza cambios para reenviar' : '↻ Reenviar solicitud'}
+    </button>
+  )
+}
 
 

@@ -218,6 +218,29 @@ router.put('/:id/aprobar', verificarToken, verificarRol(['admin']), async (req, 
 
         if (errorGet) throw errorGet;
 
+        // Si es solicitud de edición, solo marcar como aprobada (no crear inmueble)
+        if (solicitud.tipo_solicitud === 'edicion') {
+            await supabase
+                .from('solicitudes_publicacion')
+                .update({
+                    estado_aprobacion: 'aprobado',
+                    admin_revisor: req.usuario.id_usuario,
+                    fecha_revision: new Date().toISOString(),
+                    fecha_resolucion: new Date().toISOString()
+                })
+                .eq('id_solicitud', id);
+
+            // Notificar al usuario
+            await supabase.from('notificaciones').insert([{
+                id_usuario: solicitud.id_usuario,
+                tipo: 'aprobacion',
+                titulo: 'Edición aprobada',
+                mensaje: `Tu solicitud de edición para la propiedad #${solicitud.id_inmueble} ha sido aprobada. Ya puedes editar tu propiedad.`
+            }]);
+
+            return res.json({ mensaje: 'Solicitud de edición aprobada' });
+        }
+
         const datos = solicitud.datos || {};
 
         // 1. Crear inmueble
@@ -298,11 +321,122 @@ router.put('/:id/aprobar', verificarToken, verificarRol(['admin']), async (req, 
     }
 });
 
+// Marcar solicitud como recibida (admin abrió/vio la solicitud)
+router.put('/:id/recibido', verificarToken, verificarRol(['admin']), async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const { data: solicitud, error: errGet } = await supabase
+            .from('solicitudes_publicacion')
+            .select('estado_aprobacion')
+            .eq('id_solicitud', id)
+            .single();
+
+        if (errGet || !solicitud) {
+            return res.status(404).json({ error: 'Solicitud no encontrada' });
+        }
+
+        // Solo cambiar a recibido si está pendiente
+        if (solicitud.estado_aprobacion !== 'pendiente') {
+            return res.json({ mensaje: 'Solicitud ya fue procesada', estado: solicitud.estado_aprobacion });
+        }
+
+        const { data, error } = await supabase
+            .from('solicitudes_publicacion')
+            .update({
+                estado_aprobacion: 'recibido',
+                fecha_vista: new Date().toISOString()
+            })
+            .eq('id_solicitud', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        res.json({ mensaje: 'Solicitud marcada como recibida', propiedad: data });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Marcar solicitud como resuelta (admin la resolvió)
+router.put('/:id/resolver', verificarToken, verificarRol(['admin']), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { nota_admin } = req.body;
+
+        const { data: solicitud, error: errGet } = await supabase
+            .from('solicitudes_publicacion')
+            .select('estado_aprobacion')
+            .eq('id_solicitud', id)
+            .single();
+
+        if (errGet || !solicitud) {
+            return res.status(404).json({ error: 'Solicitud no encontrada' });
+        }
+
+        if (!['pendiente', 'recibido'].includes(solicitud.estado_aprobacion)) {
+            return res.status(400).json({ error: 'Esta solicitud ya fue procesada' });
+        }
+
+        const { data, error } = await supabase
+            .from('solicitudes_publicacion')
+            .update({
+                estado_aprobacion: 'resuelto',
+                admin_revisor: req.usuario.id_usuario,
+                fecha_resolucion: new Date().toISOString(),
+                fecha_revision: new Date().toISOString(),
+                motivo_rechazo: nota_admin || null
+            })
+            .eq('id_solicitud', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        // Notificar al usuario
+        await supabase.from('notificaciones').insert([{
+            id_usuario: data.id_usuario,
+            tipo: 'aprobacion',
+            titulo: 'Solicitud resuelta',
+            mensaje: 'Tu solicitud ha sido resuelta por el administrador.'
+        }]);
+
+        res.json({ mensaje: 'Solicitud marcada como resuelta', propiedad: data });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Rechazar solicitud (solo admin)
 router.put('/:id/rechazar', verificarToken, verificarRol(['admin']), async (req, res) => {
     try {
         const { id } = req.params;
         const { motivo } = req.body;
+
+        // Obtener solicitud para guardar snapshot
+        const { data: solicitudActual, error: errGet } = await supabase
+            .from('solicitudes_publicacion')
+            .select('*')
+            .eq('id_solicitud', id)
+            .single();
+
+        if (errGet || !solicitudActual) {
+            return res.status(404).json({ error: 'Solicitud no encontrada' });
+        }
+
+        // Preparar snapshot: si es edición y tiene id_inmueble, obtener datos actuales del inmueble
+        let snapshot = solicitudActual.datos;
+        if (solicitudActual.tipo_solicitud === 'edicion' && solicitudActual.id_inmueble) {
+            const { data: inmuebleActual } = await supabase
+                .from('inmuebles')
+                .select('*, ubicaciones(*)')
+                .eq('id_inmueble', solicitudActual.id_inmueble)
+                .single();
+            if (inmuebleActual) {
+                snapshot = inmuebleActual;
+            }
+        }
 
         const { data, error } = await supabase
             .from('solicitudes_publicacion')
@@ -310,7 +444,9 @@ router.put('/:id/rechazar', verificarToken, verificarRol(['admin']), async (req,
                 estado_aprobacion: 'rechazado',
                 motivo_rechazo: motivo,
                 admin_revisor: req.usuario.id_usuario,
-                fecha_revision: new Date().toISOString()
+                fecha_revision: new Date().toISOString(),
+                fecha_rechazo: new Date().toISOString(),
+                snapshot_datos_rechazo: snapshot
             })
             .eq('id_solicitud', id)
             .select()
@@ -331,6 +467,243 @@ router.put('/:id/rechazar', verificarToken, verificarRol(['admin']), async (req,
         res.status(500).json({ error: error.message });
     }
 });
+
+// Reenviar solicitud (usuario) — para solicitudes en estado 'no_resuelto' o 'rechazado'
+router.post('/:id/reenviar', verificarToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const { data: solicitudOriginal, error: errGet } = await supabase
+            .from('solicitudes_publicacion')
+            .select('*')
+            .eq('id_solicitud', id)
+            .single();
+
+        if (errGet || !solicitudOriginal) {
+            return res.status(404).json({ error: 'Solicitud no encontrada' });
+        }
+
+        // Verificar que sea del usuario
+        if (solicitudOriginal.id_usuario !== req.usuario.id_usuario) {
+            return res.status(403).json({ error: 'No tienes permisos' });
+        }
+
+        // Solo reenviar si está en no_resuelto o rechazado
+        if (!['no_resuelto', 'rechazado'].includes(solicitudOriginal.estado_aprobacion)) {
+            return res.status(400).json({ error: 'Solo puedes reenviar solicitudes no resueltas o rechazadas' });
+        }
+
+        // Si es rechazada, verificar que haya cambios
+        if (solicitudOriginal.estado_aprobacion === 'rechazado' && solicitudOriginal.snapshot_datos_rechazo) {
+            const { hayCambios } = compararDatos(solicitudOriginal.datos, solicitudOriginal.snapshot_datos_rechazo);
+            if (!hayCambios) {
+                return res.status(400).json({
+                    error: 'Debes realizar cambios antes de reenviar',
+                    codigo: 'SIN_CAMBIOS'
+                });
+            }
+        }
+
+        // Crear nueva solicitud clonando datos
+        const { data: nuevaSolicitud, error: errorInsert } = await supabase
+            .from('solicitudes_publicacion')
+            .insert([{
+                id_usuario: solicitudOriginal.id_usuario,
+                id_inmueble: solicitudOriginal.id_inmueble,
+                datos: solicitudOriginal.datos,
+                estado_aprobacion: 'pendiente',
+                tipo_solicitud: solicitudOriginal.tipo_solicitud,
+                id_solicitud_origen: solicitudOriginal.id_solicitud
+            }])
+            .select()
+            .single();
+
+        if (errorInsert) throw errorInsert;
+
+        // Notificar a admins
+        const { data: admins } = await supabase.from('usuarios').select('id_usuario').eq('rol', 'admin');
+        if (admins && admins.length > 0) {
+            await supabase.from('notificaciones').insert(
+                admins.map(a => ({
+                    id_usuario: a.id_usuario,
+                    tipo: 'sistema',
+                    titulo: 'Solicitud reenviada',
+                    mensaje: `Un usuario ha reenviado una solicitud para revisión.`
+                }))
+            );
+        }
+
+        res.status(201).json({ mensaje: 'Solicitud reenviada', solicitud: nuevaSolicitud });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Crear solicitud de edición (usuario dueño del inmueble)
+router.post('/solicitud-edicion', verificarToken, async (req, res) => {
+    try {
+        const { id_inmueble } = req.body;
+
+        if (!id_inmueble) {
+            return res.status(400).json({ error: 'id_inmueble es requerido' });
+        }
+
+        // Verificar que el usuario sea dueño del inmueble
+        const { data: inmueble, error: errInm } = await supabase
+            .from('inmuebles')
+            .select('id_usuario')
+            .eq('id_inmueble', id_inmueble)
+            .single();
+
+        if (errInm || !inmueble) {
+            return res.status(404).json({ error: 'Inmueble no encontrado' });
+        }
+
+        if (inmueble.id_usuario !== req.usuario.id_usuario) {
+            return res.status(403).json({ error: 'No eres el propietario de este inmueble' });
+        }
+
+        // Verificar si ya tiene una solicitud de edición activa
+        const { data: existente } = await supabase
+            .from('solicitudes_publicacion')
+            .select('id_solicitud, estado_aprobacion')
+            .eq('id_usuario', req.usuario.id_usuario)
+            .eq('id_inmueble', id_inmueble)
+            .eq('tipo_solicitud', 'edicion')
+            .in('estado_aprobacion', ['pendiente', 'recibido'])
+            .limit(1)
+            .maybeSingle();
+
+        if (existente) {
+            return res.status(400).json({
+                error: 'Ya tienes una solicitud de edición activa para este inmueble',
+                solicitud: existente
+            });
+        }
+
+        // Crear solicitud de edición
+        const { data: solicitud, error: errorInsert } = await supabase
+            .from('solicitudes_publicacion')
+            .insert([{
+                id_usuario: req.usuario.id_usuario,
+                id_inmueble: id_inmueble,
+                datos: { motivo: req.body.motivo || 'Solicitud de edición de propiedad' },
+                estado_aprobacion: 'pendiente',
+                tipo_solicitud: 'edicion'
+            }])
+            .select()
+            .single();
+
+        if (errorInsert) throw errorInsert;
+
+        // Notificar a admins
+        const { data: admins } = await supabase.from('usuarios').select('id_usuario').eq('rol', 'admin');
+        if (admins && admins.length > 0) {
+            await supabase.from('notificaciones').insert(
+                admins.map(a => ({
+                    id_usuario: a.id_usuario,
+                    tipo: 'sistema',
+                    titulo: 'Solicitud de edición',
+                    mensaje: `Un usuario solicita permiso para editar su propiedad #${id_inmueble}.`
+                }))
+            );
+        }
+
+        res.status(201).json({ mensaje: 'Solicitud de edición enviada', solicitud });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Obtener solicitud de edición más reciente para un inmueble del usuario
+router.get('/solicitud-edicion/:id_inmueble', verificarToken, async (req, res) => {
+    try {
+        const { id_inmueble } = req.params;
+
+        const { data, error } = await supabase
+            .from('solicitudes_publicacion')
+            .select('*')
+            .eq('id_usuario', req.usuario.id_usuario)
+            .eq('id_inmueble', id_inmueble)
+            .eq('tipo_solicitud', 'edicion')
+            .order('fecha_solicitud', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (error) throw error;
+
+        res.json({ solicitud: data || null });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Verificar cambios entre datos actuales y snapshot de rechazo
+router.get('/:id/verificar-cambios', verificarToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const { data: solicitud, error: errGet } = await supabase
+            .from('solicitudes_publicacion')
+            .select('id_usuario, datos, snapshot_datos_rechazo, id_inmueble, tipo_solicitud')
+            .eq('id_solicitud', id)
+            .single();
+
+        if (errGet || !solicitud) {
+            return res.status(404).json({ error: 'Solicitud no encontrada' });
+        }
+
+        if (solicitud.id_usuario !== req.usuario.id_usuario) {
+            return res.status(403).json({ error: 'No tienes permisos' });
+        }
+
+        if (!solicitud.snapshot_datos_rechazo) {
+            return res.json({ hayCambios: true, camposModificados: [] });
+        }
+
+        // Para solicitudes de edición, comparar datos actuales del inmueble con snapshot
+        let datosActuales = solicitud.datos;
+        if (solicitud.tipo_solicitud === 'edicion' && solicitud.id_inmueble) {
+            const { data: inmueble } = await supabase
+                .from('inmuebles')
+                .select('*, ubicaciones(*)')
+                .eq('id_inmueble', solicitud.id_inmueble)
+                .single();
+            if (inmueble) {
+                datosActuales = inmueble;
+            }
+        }
+
+        const resultado = compararDatos(datosActuales, solicitud.snapshot_datos_rechazo);
+        res.json(resultado);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Función auxiliar para comparar datos
+function compararDatos(datosActuales, snapshot) {
+    const camposModificados = [];
+
+    const keysToCompare = new Set([
+        ...Object.keys(datosActuales || {}),
+        ...Object.keys(snapshot || {})
+    ]);
+
+    for (const key of keysToCompare) {
+        if (key === 'id_inmueble' || key === 'fecha_registro' || key === 'fecha_aprobacion') continue;
+        const valActual = JSON.stringify(datosActuales?.[key] ?? null);
+        const valSnapshot = JSON.stringify(snapshot?.[key] ?? null);
+        if (valActual !== valSnapshot) {
+            camposModificados.push(key);
+        }
+    }
+
+    return {
+        hayCambios: camposModificados.length > 0,
+        camposModificados
+    };
+}
 
 // Eliminar solicitud
 router.delete('/:id', verificarToken, async (req, res) => {

@@ -27,6 +27,7 @@ import caracteristicasRoutes from './modules/caracteristicas/caracteristicas.rou
 import historialPreciosRoutes from './modules/historial/historial-precios.routes.js';
 import notificacionesRoutes from './modules/notificaciones/notificaciones.routes.js';
 import solicitudesCuentaRoutes from './modules/solicitudes/solicitudes-cuenta.routes.js';
+import solicitudesCronRoutes from './modules/solicitudes/solicitudes-cron.routes.js';
 import configuracionRoutes from './modules/configuracion/configuracion.routes.js';
 import statsRoutes from './modules/admin/stats.routes.js';
 import adminStatsRoutes from './modules/admin/admin-stats.routes.js';
@@ -92,6 +93,7 @@ app.use('/api/notificaciones', notificacionesRoutes);
 app.use('/api/historial-precios', historialPreciosRoutes);
 app.use('/api/caracteristicas', caracteristicasRoutes);
 app.use('/api/solicitudes-cuenta', solicitudesCuentaRoutes);
+app.use('/api/solicitudes-cron', solicitudesCronRoutes);
 app.use('/api/stats', statsRoutes);
 
 // Rutas de tablas especializadas (propiedades por tipo)

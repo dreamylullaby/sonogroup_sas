@@ -7,8 +7,9 @@ const EditProperty = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
 
-  // Solo admin puede editar
-  if (!user || user.rol !== 'admin') {
+  // Admin puede editar cualquier propiedad
+  // Usuarios dueños pueden editar si tienen solicitud aprobada (verificado en backend)
+  if (!user) {
     navigate('/')
     return null
   }
@@ -17,4 +18,3 @@ const EditProperty = () => {
 }
 
 export default EditProperty
-
