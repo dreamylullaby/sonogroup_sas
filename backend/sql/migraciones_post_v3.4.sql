@@ -3,8 +3,6 @@
 -- Ejecutadas sobre Base_Optimizada_V3.4.sql
 -- Fecha: Junio 2026
 -- ============================================================
-
-
 -- ============================================================
 -- MIGRACIÓN 1: Tabla borradores_inmuebles
 -- Almacena formularios incompletos.
@@ -40,14 +38,12 @@ CREATE TRIGGER trg_actualizar_borrador
     BEFORE UPDATE ON borradores_inmuebles
     FOR EACH ROW EXECUTE FUNCTION fn_actualizar_fecha_actualizacion();
 
-
 -- ============================================================
 -- MIGRACIÓN 2: Nuevo valor en tipo_sala_comedor
 -- Opción "Separados" = sala y comedor como espacios independientes
 -- ============================================================
 
 ALTER TYPE tipo_sala_comedor ADD VALUE 'separados';
-
 
 -- ============================================================
 -- MIGRACIÓN 3: Trigger de notificación para favoritos
@@ -91,7 +87,6 @@ CREATE TRIGGER trg_notificar_cambio_favorito
     FOR EACH ROW
     EXECUTE FUNCTION fn_notificar_cambio_favorito();
 
-
 -- ============================================================
 -- MIGRACIÓN 4: Estados ampliados para solicitudes
 -- Funcionalidades: estados de seguimiento, edición, reenvío
@@ -121,7 +116,6 @@ CREATE TRIGGER trg_notificar_cambio_favorito
 -- CREATE INDEX IF NOT EXISTS idx_solicitudes_pub_estado_fecha
 --     ON solicitudes_publicacion (estado_aprobacion, fecha_solicitud)
 --     WHERE estado_aprobacion IN ('pendiente', 'recibido');
-
 
 -- ============================================================
 -- RESUMEN POST v3.4
