@@ -45,6 +45,21 @@ const PublishProperty = ({ editMode = false, propertyId = null, modoRevision = f
   const [caract, setCaract] = useState({})
   const [isReenvio] = useState(() => !!location.state?.reenvioSolicitud)
   const [step4ShowErrors, setStep4ShowErrors] = useState(false)
+  const [solicitudBloqueante, setSolicitudBloqueante] = useState(null)
+
+  // Verificar si el usuario ya tiene una solicitud pendiente (solo para nueva publicación)
+  useEffect(() => {
+    if (!editMode && !isReenvio && user?.rol !== 'admin') {
+      api.get('/api/propiedades-pendientes/puede-solicitar?tipo_solicitud=publicacion')
+        .then(res => {
+          if (!res.data.puede) {
+            setSolicitudBloqueante(res.data.mensaje)
+          }
+        })
+        .catch(() => {})
+    }
+  }, [editMode, isReenvio, user])
+
   useEffect(() => {
     if (editMode && propertyId) loadPropertyData()
     else if (location.state?.reenvioSolicitud) loadReenvioData(location.state.reenvioSolicitud)
@@ -619,6 +634,18 @@ const PublishProperty = ({ editMode = false, propertyId = null, modoRevision = f
           <p>{isReenvio ? 'Corrige los datos según las observaciones del administrador y reenvía' : modoRevision ? 'Modifica los datos y envía los cambios para revisión del administrador' : editMode ? 'Modifica los datos de tu inmueble' : user?.rol === 'admin' ? 'Publicación directa como administrador' : 'Completa el formulario para enviar a revisión'}</p>
         </div>
 
+        {/* Warning banner: solicitud pendiente bloqueante */}
+        {solicitudBloqueante && (
+          <div style={{ margin: '0 0 16px', padding: '12px 16px', background: '#FEF3C7', borderRadius: '10px', borderLeft: '4px solid #D97706', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+            <AlertCircle size={18} color="#D97706" style={{ flexShrink: 0, marginTop: '1px' }} />
+            <div>
+              <p style={{ fontSize: '13px', fontWeight: 600, color: '#92400E', margin: '0 0 4px' }}>Solicitud pendiente</p>
+              <p style={{ fontSize: '12px', color: '#78350F', margin: 0, lineHeight: 1.4 }}>{solicitudBloqueante}</p>
+              <p style={{ fontSize: '11px', color: '#A16207', margin: '6px 0 0' }}>Solo puedes tener una solicitud de publicación pendiente a la vez. Espera a que el administrador la apruebe o rechace.</p>
+            </div>
+          </div>
+        )}
+
         <Stepper currentStep={currentStep} />
 
         <form onSubmit={handleSubmit} className="publish-form" noValidate ref={formRef} onKeyDown={(e) => { if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault() }}>
@@ -666,7 +693,7 @@ const PublishProperty = ({ editMode = false, propertyId = null, modoRevision = f
                   Siguiente <ArrowRight size={12} />
                 </button>
               ) : (
-                <button type="button" className="btn-next" onClick={handleSubmit} disabled={loading}>
+                <button type="button" className="btn-next" onClick={handleSubmit} disabled={loading || (!!solicitudBloqueante && !editMode && !isReenvio)}>
                   {loading ? 'Procesando...' : isReenvio ? 'Reenviar para revisión' : modoRevision ? 'Enviar cambios para revisión' : editMode ? 'Actualizar' : 'Publicar propiedad'} <Send size={12} />
                 </button>
               )}

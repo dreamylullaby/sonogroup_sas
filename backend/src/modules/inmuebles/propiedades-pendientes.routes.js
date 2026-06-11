@@ -171,6 +171,44 @@ function mapearCaracteristicas(tipo, caract, servicios = {}) {
     }
 }
 
+// Verificar si el usuario puede crear una solicitud (validación preventiva)
+router.get('/puede-solicitar', verificarToken, async (req, res) => {
+    try {
+        const { tipo_solicitud, tipo_inmueble } = req.query;
+
+        // Buscar solicitudes pendientes del usuario
+        let query = supabase
+            .from('solicitudes_publicacion')
+            .select('id_solicitud, tipo_solicitud, estado_aprobacion, datos')
+            .eq('id_usuario', req.usuario.id_usuario)
+            .eq('estado_aprobacion', 'pendiente');
+
+        if (tipo_solicitud) {
+            query = query.eq('tipo_solicitud', tipo_solicitud);
+        }
+
+        const { data: pendientes, error } = await query;
+        if (error) throw error;
+
+        // Para publicación: solo 1 pendiente en total
+        if (tipo_solicitud === 'publicacion') {
+            const bloqueante = pendientes.find(s => s.tipo_solicitud === 'publicacion');
+            if (bloqueante) {
+                const tipoBloqueo = bloqueante.datos?.tipo_inmueble || 'propiedad';
+                return res.json({
+                    puede: false,
+                    mensaje: `Ya tienes una solicitud de publicación pendiente (${tipoBloqueo}). Espera a que el administrador la resuelva.`,
+                    solicitud_bloqueante: bloqueante.id_solicitud
+                });
+            }
+        }
+
+        res.json({ puede: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Obtener solicitudes del usuario actual
 router.get('/mis-propiedades', verificarToken, async (req, res) => {
     try {
