@@ -14,6 +14,7 @@ const PropertyDetail = () => {
   const [isFavorite, setIsFavorite] = useState(false)
   const [showContactForm, setShowContactForm] = useState(false)
   const [editSolicitud, setEditSolicitud] = useState(null)
+  const [revisionPendiente, setRevisionPendiente] = useState(false)
   const [showEditConfirmModal, setShowEditConfirmModal] = useState(false)
   const [editRequestLoading, setEditRequestLoading] = useState(false)
   const [editJustificacion, setEditJustificacion] = useState('')
@@ -93,6 +94,18 @@ const PropertyDetail = () => {
       api.get(`/api/propiedades-pendientes/solicitud-edicion/${id}`)
         .then(res => setEditSolicitud(res.data.solicitud))
         .catch(() => setEditSolicitud(null))
+      // Verificar si hay una revision_edicion pendiente
+      api.get('/api/propiedades-pendientes/mis-propiedades')
+        .then(res => {
+          const sols = res.data.propiedades || []
+          const revPendiente = sols.find(s =>
+            s.tipo_solicitud === 'revision_edicion' &&
+            s.id_inmueble === parseInt(id) &&
+            s.estado_aprobacion === 'pendiente'
+          )
+          setRevisionPendiente(!!revPendiente)
+        })
+        .catch(() => setRevisionPendiente(false))
     }
   }, [user, property, id, authLoading])
 
@@ -238,6 +251,17 @@ const PropertyDetail = () => {
                 )
               }
               if (editSolicitud.estado_aprobacion === 'aprobado') {
+                // Si ya hay una revision pendiente, deshabilitar
+                if (revisionPendiente) {
+                  return (
+                    <button disabled className="btn-edit-admin" style={{ opacity: 0.6, cursor: 'not-allowed', background: '#F59E0B', color: '#fff', border: 'none' }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                      </svg>
+                      Cambios en revisión
+                    </button>
+                  )
+                }
                 return (
                   <button onClick={() => navigate(`/editar-propiedad/${id}`)} className="btn-edit-admin" style={{ background: '#059669', color: '#fff', border: 'none' }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

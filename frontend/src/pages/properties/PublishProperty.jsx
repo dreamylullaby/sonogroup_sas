@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { api, parseApiError, ENUMS, ENUM_LABELS } from '../../config/api'
 import { buildInmueblePayload } from '../../utils/payloadMappers'
@@ -15,6 +15,7 @@ const CURRENT_YEAR = new Date().getFullYear()
 const PublishProperty = ({ editMode = false, propertyId = null, modoRevision = false }) => {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const formRef = useRef(null)
   const originalDataRef = useRef(null)
   const [loading, setLoading] = useState(false)
@@ -42,9 +43,11 @@ const PublishProperty = ({ editMode = false, propertyId = null, modoRevision = f
   })
 
   const [caract, setCaract] = useState({})
+  const [isReenvio] = useState(() => !!location.state?.reenvioSolicitud)
   const [step4ShowErrors, setStep4ShowErrors] = useState(false)
   useEffect(() => {
     if (editMode && propertyId) loadPropertyData()
+    else if (location.state?.reenvioSolicitud) loadReenvioData(location.state.reenvioSolicitud)
     else loadDraft()
   }, [editMode, propertyId])
 
@@ -76,9 +79,26 @@ const PublishProperty = ({ editMode = false, propertyId = null, modoRevision = f
     }
   }
 
+  // Cargar datos de una solicitud rechazada para reenvío
+  const loadReenvioData = (solicitud) => {
+    const d = solicitud.datos || {}
+    if (d.valor) setFormData(prev => ({
+      ...prev,
+      valor: d.valor || '', valor_administracion: d.valor_administracion || '',
+      estrato: d.estrato?.toString() || '3', descripcion: d.descripcion || '',
+      numero_matricula: d.numero_matricula || '', codigo_catastral: d.codigo_catastral || '',
+      tipo_operacion: d.tipo_operacion || 'venta', tipo_inmueble: d.tipo_inmueble || 'casa',
+      estado_inmueble: d.estado_inmueble || 'nuevo', zona: d.zona || 'urbano',
+      acepta_permuta: d.acepta_permuta || false
+    }))
+    if (d.ubicacion) setUbicacion(d.ubicacion)
+    if (d.servicios) setServicios(d.servicios)
+    if (d.caracteristicas) setCaract(d.caracteristicas)
+  }
+
   useEffect(() => {
-    if (!editMode) setCaract({})
-  }, [formData.tipo_inmueble, editMode])
+    if (!editMode && !isReenvio) setCaract({})
+  }, [formData.tipo_inmueble, editMode, isReenvio])
 
   useEffect(() => {
     if (currentStep === 4) {
@@ -113,8 +133,8 @@ const PublishProperty = ({ editMode = false, propertyId = null, modoRevision = f
         })
       }
       if (p.caracteristicas) {
-        const { id_inmueble, ...rest } = p.caracteristicas
-        setCaract(rest)
+        const { id_inmueble, anio_construccion, ...rest } = p.caracteristicas
+        setCaract({ ...rest, ano_construccion: anio_construccion || rest.ano_construccion || '' })
       }
 
       // Guardar datos originales para comparación en modo revisión
@@ -133,7 +153,7 @@ const PublishProperty = ({ editMode = false, propertyId = null, modoRevision = f
             municipio: p.ubicaciones?.municipio || '', departamento: p.ubicaciones?.departamento || ''
           },
           servicios: { ...servicios },
-          caract: p.caracteristicas ? (() => { const { id_inmueble: _id, ...r } = p.caracteristicas; return r })() : {}
+          caract: p.caracteristicas ? (() => { const { id_inmueble: _id, anio_construccion: _anio, ...r } = p.caracteristicas; return { ...r, ano_construccion: _anio || r.ano_construccion || '' } })() : {}
         }
       }
     } catch (err) {
@@ -405,6 +425,8 @@ const PublishProperty = ({ editMode = false, propertyId = null, modoRevision = f
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault()
+    // Only submit from step 4
+    if (currentStep !== totalSteps) return
     setStep4ShowErrors(true)
     const result = validateStep(4, { show: true })
     if (!result.isValid) return
@@ -575,7 +597,7 @@ const PublishProperty = ({ editMode = false, propertyId = null, modoRevision = f
 
         <Stepper currentStep={currentStep} />
 
-        <form onSubmit={handleSubmit} className="publish-form" noValidate ref={formRef}>
+        <form onSubmit={handleSubmit} className="publish-form" noValidate ref={formRef} onKeyDown={(e) => { if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault() }}>
           {success && <div className="success-message">{success}</div>}
           {errors.general && <div className="field__error" style={{ marginBottom: 12 }}><AlertCircle size={12} /> {errors.general}</div>}
 
@@ -620,7 +642,7 @@ const PublishProperty = ({ editMode = false, propertyId = null, modoRevision = f
                   Siguiente <ArrowRight size={12} />
                 </button>
               ) : (
-                <button type="submit" className="btn-next" disabled={loading}>
+                <button type="button" className="btn-next" onClick={handleSubmit} disabled={loading}>
                   {loading ? 'Procesando...' : modoRevision ? 'Enviar cambios para revisión' : editMode ? 'Actualizar' : 'Publicar propiedad'} <Send size={12} />
                 </button>
               )}
