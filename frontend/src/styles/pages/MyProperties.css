@@ -404,3 +404,174 @@
 }
 
 .myp-modal-btn-cancel:hover { background: #e0d8ec; }
+
+/* Filters */
+.myp-filters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.myp-filters-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.myp-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  border: 0.5px solid #e0d8ec;
+  border-radius: 8px;
+  padding: 6px 12px;
+  min-width: 200px;
+  max-width: 280px;
+}
+
+.myp-search input {
+  border: none;
+  outline: none;
+  background: none;
+  font-size: 12px;
+  color: #241929;
+  width: 100%;
+}
+
+.myp-search input::placeholder { color: #8097B7; }
+.myp-search svg { color: #8097B7; flex-shrink: 0; }
+
+.myp-filters select {
+  padding: 6px 10px;
+  border: 0.5px solid #e0d8ec;
+  border-radius: 8px;
+  font-size: 11px;
+  color: #5A4864;
+  background: #fff;
+  outline: none;
+  cursor: pointer;
+}
+
+.myp-deleted-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 0.5px solid #e0d8ec;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  color: #5A4864;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.myp-deleted-btn:hover { border-color: #CC1E2B; color: #CC1E2B; }
+
+.myp-deleted-btn.active {
+  background: #FCE8EC;
+  border-color: #f0b8c4;
+  color: #8C1132;
+}
+
+.myp-filter-reset {
+  padding: 6px 10px;
+  border: none;
+  background: none;
+  font-size: 11px;
+  color: #CC1E2B;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+/* Pagination */
+.myp-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 1.5rem;
+}
+
+.myp-pagination button {
+  padding: 6px 14px;
+  border: 0.5px solid #e0d8ec;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  color: #5A4864;
+  cursor: pointer;
+}
+
+.myp-pagination button:hover:not(:disabled) { border-color: #CC1E2B; color: #CC1E2B; }
+.myp-pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+.myp-pagination span { font-size: 11px; color: #8097B7; }
+
+/* New action buttons */
+.btn-restaurar {
+  padding: 4px 10px;
+  border: 0.5px solid #b8dfc8;
+  border-radius: 6px;
+  background: #E8F5EE;
+  color: #1a7a48;
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-eliminar-hard {
+  padding: 4px 10px;
+  border: 0.5px solid #f0b8c4;
+  border-radius: 6px;
+  background: #FCE8EC;
+  color: #8C1132;
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-eliminar-sm {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  border: 0.5px solid #e0d8ec;
+  border-radius: 6px;
+  background: #fff;
+  color: #8C1132;
+  cursor: pointer;
+}
+
+.btn-reenviar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 6px;
+  background: #6B3FA0;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-reenviar:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.sol-badge-edicion {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: 9px;
+  font-weight: 600;
+  background: #EDE9FE;
+  color: #7C3AED;
+}

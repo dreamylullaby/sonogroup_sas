@@ -13,8 +13,25 @@ const Contact = () => {
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const [formData, setFormData] = useState({
-    nombre: user?.nombre || '', email: user?.email || '',
-    telefono: '', asunto: '', mensaje: ''
+    nombre: '', email: '', telefono: '', asunto: '', mensaje: ''
+  })
+
+  // Pre-fill from user data when available
+  useState(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        nombre: user.nombre || user.nombre_completo || '',
+        email: user.email || ''
+      }))
+      // Fetch full profile for phone
+      api.get('/api/usuarios/perfil').then(res => {
+        const perfil = res.data.usuario
+        if (perfil?.telefono) {
+          setFormData(prev => ({ ...prev, telefono: perfil.telefono }))
+        }
+      }).catch(() => {})
+    }
   })
 
   const handleChange = e => {
@@ -46,7 +63,7 @@ const Contact = () => {
     try {
       await api.post('/api/contactos-general', formData)
       setSuccess(true)
-      setFormData({ nombre: user?.nombre || '', email: user?.email || '', telefono: '', asunto: '', mensaje: '' })
+      setFormData(prev => ({ ...prev, asunto: '', mensaje: '' }))
     } catch (err) {
       setError(parseApiError(err))
     } finally {
@@ -73,6 +90,7 @@ const Contact = () => {
                   <label htmlFor="nombre">{t('nombreLabel')} *</label>
                   <input type="text" id="nombre" name="nombre" value={formData.nombre}
                     onChange={handleChange} disabled={loading} required
+                    readOnly={!!user} style={user ? { opacity: 0.7 } : {}}
                     aria-invalid={!!fieldErrors.nombre} />
                   {fieldErrors.nombre && <small className="field-error">{fieldErrors.nombre}</small>}
                 </div>
@@ -80,6 +98,7 @@ const Contact = () => {
                   <label htmlFor="email">{t('emailLabel')} *</label>
                   <input type="email" id="email" name="email" value={formData.email}
                     onChange={handleChange} disabled={loading} required
+                    readOnly={!!user} style={user ? { opacity: 0.7 } : {}}
                     aria-invalid={!!fieldErrors.email} />
                   {fieldErrors.email && <small className="field-error">{fieldErrors.email}</small>}
                 </div>
