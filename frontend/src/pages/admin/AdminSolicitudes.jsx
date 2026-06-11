@@ -130,6 +130,9 @@ export default function AdminSolicitudes() {
                     <div className="admin-list-item__title" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                       <Badge config={tipoConf} />
                       <Badge config={estadoConf} />
+                      {s.estado_aprobacion === 'pendiente' && s.motivo_rechazo && (
+                        <span style={{ padding: '2px 6px', borderRadius: '8px', fontSize: '8px', fontWeight: 600, background: '#FEF3C7', color: '#B45309', textTransform: 'uppercase' }}>↻ Reenvío</span>
+                      )}
                       <span style={{ marginLeft: '0.25rem' }}>
                         {d.tipo_inmueble || 'propiedad'}
                         {d.tipo_operacion ? ` — ${d.tipo_operacion === 'arriendo' ? 'Arriendo' : 'Venta'}` : ''}

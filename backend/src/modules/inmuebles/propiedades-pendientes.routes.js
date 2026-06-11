@@ -387,6 +387,70 @@ router.put('/:id/rechazar', verificarToken, verificarRol(['admin']), async (req,
     }
 });
 
+// Reenviar solicitud corregida (actualiza la misma fila, no crea nueva)
+router.put('/:id/reenviar-corregido', verificarToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { datos } = req.body;
+
+        if (!datos) {
+            return res.status(400).json({ error: 'Los datos corregidos son requeridos' });
+        }
+
+        const { data: solicitud, error: errGet } = await supabase
+            .from('solicitudes_publicacion')
+            .select('*')
+            .eq('id_solicitud', id)
+            .single();
+
+        if (errGet || !solicitud) {
+            return res.status(404).json({ error: 'Solicitud no encontrada' });
+        }
+
+        if (solicitud.id_usuario !== req.usuario.id_usuario) {
+            return res.status(403).json({ error: 'No tienes permisos' });
+        }
+
+        if (solicitud.estado_aprobacion !== 'rechazado') {
+            return res.status(400).json({ error: 'Solo puedes corregir solicitudes rechazadas' });
+        }
+
+        // Actualizar la misma solicitud con datos corregidos y volver a pendiente
+        const { data, error } = await supabase
+            .from('solicitudes_publicacion')
+            .update({
+                datos: datos,
+                estado_aprobacion: 'pendiente',
+                fecha_solicitud: new Date().toISOString(),
+                admin_revisor: null,
+                fecha_revision: null,
+                fecha_rechazo: null
+            })
+            .eq('id_solicitud', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        // Notificar a admins
+        const { data: admins } = await supabase.from('usuarios').select('id_usuario').eq('rol', 'admin');
+        if (admins && admins.length > 0) {
+            await supabase.from('notificaciones').insert(
+                admins.map(a => ({
+                    id_usuario: a.id_usuario,
+                    tipo: 'sistema',
+                    titulo: 'Solicitud corregida y reenviada',
+                    mensaje: `Un usuario corrigió y reenvió la solicitud #${id} para revisión.`
+                }))
+            );
+        }
+
+        res.json({ mensaje: 'Solicitud corregida y reenviada', solicitud: data });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Reenviar solicitud (usuario) — para solicitudes en estado 'no_resuelto' o 'rechazado'
 router.post('/:id/reenviar', verificarToken, async (req, res) => {
     try {

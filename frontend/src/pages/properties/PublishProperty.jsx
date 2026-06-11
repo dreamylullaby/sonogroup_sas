@@ -82,7 +82,7 @@ const PublishProperty = ({ editMode = false, propertyId = null, modoRevision = f
   // Cargar datos de una solicitud rechazada para reenvío
   const loadReenvioData = (solicitud) => {
     const d = solicitud.datos || {}
-    if (d.valor) setFormData(prev => ({
+    if (d.valor !== undefined) setFormData(prev => ({
       ...prev,
       valor: d.valor || '', valor_administracion: d.valor_administracion || '',
       estrato: d.estrato?.toString() || '3', descripcion: d.descripcion || '',
@@ -93,7 +93,22 @@ const PublishProperty = ({ editMode = false, propertyId = null, modoRevision = f
     }))
     if (d.ubicacion) setUbicacion(d.ubicacion)
     if (d.servicios) setServicios(d.servicios)
-    if (d.caracteristicas) setCaract(d.caracteristicas)
+    if (d.caracteristicas) {
+      // Reverse-map backend field names to frontend form names
+      const c = d.caracteristicas
+      const mapped = { ...c }
+      // anio_construccion (BD) → ano_construccion (form)
+      if (c.anio_construccion !== undefined && c.ano_construccion === undefined) {
+        mapped.ano_construccion = c.anio_construccion
+      }
+      // altura_libre (BD) → altura (form for bodega)
+      if (c.altura_libre !== undefined && c.altura === undefined) {
+        mapped.altura = c.altura_libre
+      }
+      // Remove the id_inmueble if present
+      delete mapped.id_inmueble
+      setCaract(mapped)
+    }
   }
 
   useEffect(() => {
@@ -435,7 +450,16 @@ const PublishProperty = ({ editMode = false, propertyId = null, modoRevision = f
     try {
       const payload = buildInmueblePayload({ ...formData }, ubicacion, servicios, caract)
 
-      // Modo revisión: usuario envía cambios para revisión del admin
+      // Reenvío de solicitud rechazada: actualiza la misma solicitud en BD
+      if (isReenvio && location.state?.reenvioSolicitud) {
+        const solicitudId = location.state.reenvioSolicitud.id_solicitud
+        await api.put(`/api/propiedades-pendientes/${solicitudId}/reenviar-corregido`, { datos: payload })
+        setSuccess('Solicitud corregida y reenviada para revisión.')
+        setTimeout(() => navigate('/mis-propiedades'), 1500)
+        return
+      }
+
+      // Modo revisión: usuario envía cambios para revisión del admin (edición de propiedad publicada)
       if (modoRevision && editMode && propertyId) {
         const original = originalDataRef.current
         if (!original) {
@@ -591,8 +615,8 @@ const PublishProperty = ({ editMode = false, propertyId = null, modoRevision = f
     <div className="publish-property-page">
       <div className="publish-container">
         <div className="publish-header">
-          <h1>{modoRevision ? 'Editar Propiedad' : editMode ? 'Editar Propiedad' : 'Publicar Propiedad'}</h1>
-          <p>{modoRevision ? 'Modifica los datos y envía los cambios para revisión del administrador' : editMode ? 'Modifica los datos de tu inmueble' : user?.rol === 'admin' ? 'Publicación directa como administrador' : 'Completa el formulario para enviar a revisión'}</p>
+          <h1>{isReenvio ? 'Corregir y Reenviar' : modoRevision ? 'Editar Propiedad' : editMode ? 'Editar Propiedad' : 'Publicar Propiedad'}</h1>
+          <p>{isReenvio ? 'Corrige los datos según las observaciones del administrador y reenvía' : modoRevision ? 'Modifica los datos y envía los cambios para revisión del administrador' : editMode ? 'Modifica los datos de tu inmueble' : user?.rol === 'admin' ? 'Publicación directa como administrador' : 'Completa el formulario para enviar a revisión'}</p>
         </div>
 
         <Stepper currentStep={currentStep} />
@@ -643,7 +667,7 @@ const PublishProperty = ({ editMode = false, propertyId = null, modoRevision = f
                 </button>
               ) : (
                 <button type="button" className="btn-next" onClick={handleSubmit} disabled={loading}>
-                  {loading ? 'Procesando...' : modoRevision ? 'Enviar cambios para revisión' : editMode ? 'Actualizar' : 'Publicar propiedad'} <Send size={12} />
+                  {loading ? 'Procesando...' : isReenvio ? 'Reenviar para revisión' : modoRevision ? 'Enviar cambios para revisión' : editMode ? 'Actualizar' : 'Publicar propiedad'} <Send size={12} />
                 </button>
               )}
             </div>

@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { usePreferences } from '../../context/PreferencesContext'
 import { api, parseApiError } from '../../config/api'
-import { Search, Trash2, RefreshCw, Eye, X, EyeOff, Edit3, CheckCircle, AlertCircle } from 'lucide-react'
+import { Search, Trash2, Eye, X, EyeOff, Edit3 } from 'lucide-react'
 import '../../styles/pages/MyProperties.css'
 
 const ITEMS_PER_PAGE = 10
@@ -315,6 +315,9 @@ const MyProperties = () => {
                       <div className="sol-info">
                         <div className="sol-tipo" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                           <span style={{ padding: '2px 7px', borderRadius: '8px', fontSize: '9px', fontWeight: 600, color: tipoSolConf.color, background: tipoSolConf.bg, textTransform: 'uppercase' }}>{tipoSolConf.label}</span>
+                          {s.estado_aprobacion === 'pendiente' && s.motivo_rechazo && (
+                            <span style={{ padding: '2px 6px', borderRadius: '8px', fontSize: '8px', fontWeight: 600, background: '#FEF3C7', color: '#B45309', textTransform: 'uppercase' }}>↻ Reenvío</span>
+                          )}
                           {tipoSol === 'publicacion' && datos.tipo_inmueble && <span style={{ textTransform: 'capitalize', fontWeight: 500, fontSize: '13px' }}>{datos.tipo_inmueble}</span>}
                           {tipoSol === 'publicacion' && datos.tipo_operacion && <span className="sol-op">{datos.tipo_operacion}</span>}
                           {(tipoSol === 'edicion' || tipoSol === 'revision_edicion') && s.id_inmueble && <span style={{ fontSize: '12px', color: '#5A4864' }}>Propiedad #{s.id_inmueble}</span>}
@@ -342,12 +345,9 @@ const MyProperties = () => {
                           ) : (
                             <>
                               {s.estado_aprobacion === 'rechazado' && tipoSol === 'publicacion' && (
-                                <>
-                                  <button className="btn-editar-corregir" onClick={() => navigate('/publicar', { state: { reenvioSolicitud: s } })} title="Editar y reenviar" style={{ padding: '4px 8px', fontSize: '10px', background: '#F3EEFF', color: '#6B3FA0', border: '1px solid #E0D8EC', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                                    <Edit3 size={10} /> Editar
-                                  </button>
-                                  <ReenviarButton solicitud={s} onSuccess={cargarDatos} />
-                                </>
+                                <button onClick={() => navigate('/publicar', { state: { reenvioSolicitud: s } })} title="Editar y reenviar" style={{ padding: '4px 8px', fontSize: '10px', background: '#F3EEFF', color: '#6B3FA0', border: '1px solid #E0D8EC', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                  <Edit3 size={10} /> Editar y reenviar
+                                </button>
                               )}
                               <button className="btn-eliminar-sm" onClick={() => setDeleteModal({ id: s.id_solicitud, type: 'sol' })}><Trash2 size={12} /></button>
                             </>
@@ -422,48 +422,7 @@ function Pagination({ page, total, onChange }) {
   )
 }
 
-// Reenviar button with success/error feedback
-function ReenviarButton({ solicitud, onSuccess }) {
-  const [sending, setSending] = useState(false)
-  const [resultModal, setResultModal] = useState(null) // { type: 'success' | 'error', message: '' }
 
-  const handleReenviar = async () => {
-    setSending(true)
-    try {
-      await api.post(`/api/propiedades-pendientes/${solicitud.id_solicitud}/reenviar`)
-      setResultModal({ type: 'success', message: 'Tu solicitud fue reenviada correctamente. El administrador la revisará pronto.' })
-      setTimeout(() => { setResultModal(null); onSuccess() }, 2500)
-    } catch (err) {
-      setResultModal({ type: 'error', message: err.response?.data?.error || 'Ocurrió un error al reenviar la solicitud. Intenta de nuevo.' })
-    } finally { setSending(false) }
-  }
-
-  return (
-    <>
-      <button onClick={handleReenviar} disabled={sending} className="btn-reenviar" style={{ padding: '4px 8px', fontSize: '10px', background: '#D1FAE5', color: '#065F46', border: '1px solid #A7F3D0', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-        <RefreshCw size={10} /> {sending ? '...' : 'Reenviar'}
-      </button>
-
-      {/* Result modal */}
-      {resultModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(13,27,46,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120 }} onClick={() => setResultModal(null)}>
-          <div style={{ background: '#fff', borderRadius: '14px', padding: '28px', width: '100%', maxWidth: '360px', textAlign: 'center', border: '0.5px solid #e0d8ec' }} onClick={e => e.stopPropagation()}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: resultModal.type === 'success' ? '#D1FAE5' : '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
-              {resultModal.type === 'success' ? <CheckCircle size={22} color="#059669" /> : <AlertCircle size={22} color="#DC2626" />}
-            </div>
-            <h3 style={{ fontSize: '15px', fontWeight: 500, color: '#241929', margin: '0 0 8px' }}>
-              {resultModal.type === 'success' ? 'Solicitud reenviada' : 'Error al reenviar'}
-            </h3>
-            <p style={{ fontSize: '12px', color: '#5A4864', lineHeight: 1.5, margin: '0 0 16px' }}>{resultModal.message}</p>
-            <button onClick={() => setResultModal(null)} style={{ padding: '7px 18px', fontSize: '11px', background: resultModal.type === 'success' ? '#059669' : '#DC2626', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
-              Entendido
-            </button>
-          </div>
-        </div>
-      )}
-    </>
-  )
-}
 
 export default MyProperties
 
@@ -536,6 +495,14 @@ function SolicitudDetailModalUser({ solicitud, property, loading, onClose }) {
         </div>
 
         <p style={{ fontSize: '11px', color: '#8097B7', marginBottom: '14px' }}>Enviada el {formatDate(solicitud.fecha_solicitud)}</p>
+
+        {/* Indicador de reenvío con correcciones */}
+        {solicitud.estado_aprobacion === 'pendiente' && solicitud.motivo_rechazo && (
+          <div style={{ marginBottom: '14px', padding: '8px 12px', background: '#FEF3C7', borderRadius: '8px', borderLeft: '3px solid #B45309', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '12px' }}>↻</span>
+            <span style={{ fontSize: '11px', color: '#92400E', fontWeight: 500 }}>Reenvío con correcciones — fue rechazada anteriormente y se corrigió según las observaciones del admin</span>
+          </div>
+        )}
 
         {/* Motivo de rechazo del admin (PROMINENTE) */}
         {solicitud.estado_aprobacion === 'rechazado' && solicitud.motivo_rechazo && solicitud.motivo_rechazo !== 'completada' && solicitud.motivo_rechazo !== 'en_revision' && (

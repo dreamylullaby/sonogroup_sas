@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { Bell } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { api } from '../../config/api'
 
 export default function AdminNotificaciones() {
   const [notificaciones, setNotificaciones] = useState([])
   const [loading, setLoading] = useState(true)
+  const navigate = useNavigate()
 
   const fetchData = () => {
     setLoading(true)
@@ -15,6 +17,31 @@ export default function AdminNotificaciones() {
   const noLeidas = notificaciones.filter(n => !n.leida)
 
   const marcarTodas = async () => { await api.put('/api/notificaciones/leer-todas'); fetchData() }
+
+  // Navegar a la sección relevante según el tipo de notificación
+  const handleClickNotificacion = async (n) => {
+    // Marcar como leída
+    if (!n.leida) {
+      await api.put(`/api/notificaciones/${n.id_notificacion}/leer`)
+    }
+
+    // Determinar destino según título/tipo
+    const titulo = (n.titulo || '').toLowerCase()
+    const mensaje = (n.mensaje || '').toLowerCase()
+
+    if (titulo.includes('solicitud') || titulo.includes('edición') || titulo.includes('publicacion') || titulo.includes('reenvi') || titulo.includes('revisión') || titulo.includes('cambios')) {
+      navigate('/admin/solicitudes')
+    } else if (titulo.includes('contacto') || titulo.includes('consulta') || titulo.includes('mensaje')) {
+      navigate('/admin/contactos')
+    } else if (titulo.includes('propiedad') || titulo.includes('inmueble') || n.id_inmueble) {
+      navigate('/admin/propiedades')
+    } else if (titulo.includes('usuario') || titulo.includes('cuenta') || titulo.includes('eliminación')) {
+      navigate('/admin/usuarios')
+    } else {
+      // Default: refrescar
+      fetchData()
+    }
+  }
 
   return (
     <div>
@@ -36,13 +63,20 @@ export default function AdminNotificaciones() {
         ) : (
           <div className="admin-card__body">
             {noLeidas.map(n => (
-              <div key={n.id_notificacion} style={{ padding: '0.85rem 1.5rem', borderBottom: '1px solid #f8f8f8', borderLeft: !n.leida ? '3px solid #E20613' : '3px solid transparent', display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+              <div
+                key={n.id_notificacion}
+                onClick={() => handleClickNotificacion(n)}
+                style={{ padding: '0.85rem 1.5rem', borderBottom: '1px solid #f8f8f8', borderLeft: !n.leida ? '3px solid #E20613' : '3px solid transparent', display: 'flex', gap: '0.75rem', alignItems: 'flex-start', cursor: 'pointer', transition: 'background 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.background = '#F9F7FB'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
                 <div style={{ width: 6, height: 6, borderRadius: '50%', background: !n.leida ? '#E20613' : '#ddd', marginTop: 5, flexShrink: 0 }}></div>
-                <div>
+                <div style={{ flex: 1 }}>
                   <p style={{ fontSize: '0.75rem', fontWeight: 500, color: '#333' }}>{n.titulo}</p>
                   {n.mensaje && <p style={{ fontSize: '0.68rem', color: '#888', marginTop: '0.2rem' }}>{n.mensaje}</p>}
-                  <p style={{ fontSize: '0.6rem', color: '#ccc', marginTop: '0.3rem' }}>{n.fecha_creacion ? new Date(n.fecha_creacion).toLocaleDateString('es-CO') : ''}</p>
+                  <p style={{ fontSize: '0.6rem', color: '#ccc', marginTop: '0.3rem' }}>{n.fecha_creacion ? new Date(n.fecha_creacion).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}</p>
                 </div>
+                <span style={{ fontSize: '0.6rem', color: '#6B3FA0', marginTop: '4px' }}>→</span>
               </div>
             ))}
           </div>
