@@ -603,6 +603,153 @@ router.post('/solicitud-edicion', verificarToken, async (req, res) => {
     }
 });
 
+// Crear solicitud de eliminación (usuario dueño)
+router.post('/solicitud-eliminacion', verificarToken, async (req, res) => {
+    try {
+        const { id_inmueble, motivo } = req.body;
+
+        if (!id_inmueble) {
+            return res.status(400).json({ error: 'id_inmueble es requerido' });
+        }
+
+        // Verificar que el usuario sea dueño
+        const { data: inmueble, error: errInm } = await supabase
+            .from('inmuebles')
+            .select('id_usuario, tipo_inmueble, valor')
+            .eq('id_inmueble', id_inmueble)
+            .single();
+
+        if (errInm || !inmueble) {
+            return res.status(404).json({ error: 'Inmueble no encontrado' });
+        }
+
+        if (inmueble.id_usuario !== req.usuario.id_usuario) {
+            return res.status(403).json({ error: 'No eres el propietario de este inmueble' });
+        }
+
+        // Verificar si ya tiene una solicitud de eliminación activa
+        const { data: existente } = await supabase
+            .from('solicitudes_publicacion')
+            .select('id_solicitud, estado_aprobacion')
+            .eq('id_usuario', req.usuario.id_usuario)
+            .eq('id_inmueble', id_inmueble)
+            .eq('tipo_solicitud', 'eliminacion')
+            .eq('estado_aprobacion', 'pendiente')
+            .limit(1)
+            .maybeSingle();
+
+        if (existente) {
+            return res.status(400).json({ error: 'Ya tienes una solicitud de eliminación pendiente para este inmueble' });
+        }
+
+        // Crear solicitud
+        const { data: solicitud, error: errorInsert } = await supabase
+            .from('solicitudes_publicacion')
+            .insert([{
+                id_usuario: req.usuario.id_usuario,
+                id_inmueble: id_inmueble,
+                datos: { motivo: motivo || null, tipo_inmueble: inmueble.tipo_inmueble, valor: inmueble.valor },
+                estado_aprobacion: 'pendiente',
+                tipo_solicitud: 'eliminacion'
+            }])
+            .select()
+            .single();
+
+        if (errorInsert) throw errorInsert;
+
+        // Notificar a admins
+        const { data: admins } = await supabase.from('usuarios').select('id_usuario').eq('rol', 'admin');
+        if (admins && admins.length > 0) {
+            await supabase.from('notificaciones').insert(
+                admins.map(a => ({
+                    id_usuario: a.id_usuario,
+                    tipo: 'sistema',
+                    titulo: 'Solicitud de eliminación',
+                    mensaje: `Un usuario solicita eliminar su propiedad #${id_inmueble}.`
+                }))
+            );
+        }
+
+        res.status(201).json({ mensaje: 'Solicitud de eliminación enviada', solicitud });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Obtener solicitud de eliminación activa para un inmueble del usuario
+router.get('/solicitud-eliminacion/:id_inmueble', verificarToken, async (req, res) => {
+    try {
+        const { id_inmueble } = req.params;
+
+        const { data, error } = await supabase
+            .from('solicitudes_publicacion')
+            .select('*')
+            .eq('id_usuario', req.usuario.id_usuario)
+            .eq('id_inmueble', id_inmueble)
+            .eq('tipo_solicitud', 'eliminacion')
+            .order('fecha_solicitud', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (error) throw error;
+
+        res.json({ solicitud: data || null });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Aprobar eliminación (admin) — soft delete del inmueble
+router.put('/:id/aprobar-eliminacion', verificarToken, verificarRol(['admin']), async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const { data: solicitud, error: errGet } = await supabase
+            .from('solicitudes_publicacion')
+            .select('*')
+            .eq('id_solicitud', id)
+            .single();
+
+        if (errGet || !solicitud) {
+            return res.status(404).json({ error: 'Solicitud no encontrada' });
+        }
+
+        if (solicitud.tipo_solicitud !== 'eliminacion') {
+            return res.status(400).json({ error: 'Esta solicitud no es de eliminación' });
+        }
+
+        // Soft delete del inmueble
+        const { error: errDelete } = await supabase
+            .from('inmuebles')
+            .update({
+                activo: false,
+                fecha_eliminacion: new Date().toISOString()
+            })
+            .eq('id_inmueble', solicitud.id_inmueble);
+
+        if (errDelete) throw errDelete;
+
+        // Marcar solicitud como aprobada
+        await supabase.from('solicitudes_publicacion').update({
+            estado_aprobacion: 'aprobado',
+            admin_revisor: req.usuario.id_usuario,
+            fecha_revision: new Date().toISOString()
+        }).eq('id_solicitud', id);
+
+        // Notificar al usuario
+        await supabase.from('notificaciones').insert([{
+            id_usuario: solicitud.id_usuario,
+            tipo: 'aprobacion',
+            titulo: 'Propiedad eliminada',
+            mensaje: `Tu solicitud de eliminación fue aprobada. La propiedad #${solicitud.id_inmueble} ha sido eliminada del portafolio.`
+        }]);
+
+        res.json({ mensaje: 'Propiedad eliminada correctamente' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Obtener solicitud de edición más reciente para un inmueble del usuario
 router.get('/solicitud-edicion/:id_inmueble', verificarToken, async (req, res) => {
     try {

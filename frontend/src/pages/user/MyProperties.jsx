@@ -321,11 +321,19 @@ const MyProperties = () => {
                           {tipoSol === 'publicacion' && datos.tipo_inmueble && <span style={{ textTransform: 'capitalize', fontWeight: 500, fontSize: '13px' }}>{datos.tipo_inmueble}</span>}
                           {tipoSol === 'publicacion' && datos.tipo_operacion && <span className="sol-op">{datos.tipo_operacion}</span>}
                           {(tipoSol === 'edicion' || tipoSol === 'revision_edicion') && s.id_inmueble && <span style={{ fontSize: '12px', color: '#5A4864' }}>Propiedad #{s.id_inmueble}</span>}
+                          {tipoSol === 'eliminacion' && s.id_inmueble && <span style={{ fontSize: '12px', color: '#5A4864' }}>Propiedad #{s.id_inmueble}</span>}
+                          {tipoSol === 'eliminacion' && datos.tipo_inmueble && <span style={{ textTransform: 'capitalize', fontSize: '12px', color: '#5A4864' }}> · {datos.tipo_inmueble}</span>}
                         </div>
                         {tipoSol === 'publicacion' && <p className="sol-precio">{datos.valor ? formatPrecio(datos.valor) : '—'}</p>}
                         {tipoSol === 'publicacion' && <p className="sol-ubicacion">{datos.ubicacion?.municipio || '—'}{datos.ubicacion?.barrio_vereda ? ` · ${datos.ubicacion.barrio_vereda}` : ''}</p>}
                         {tipoSol === 'edicion' && <p style={{ fontSize: '12px', color: '#5A4864', fontStyle: 'italic', margin: '4px 0 0' }}>"{datos.motivo || 'Solicitud de edición'}"</p>}
                         {tipoSol === 'revision_edicion' && <p style={{ fontSize: '12px', color: '#5A4864', margin: '4px 0 0' }}>Cambios enviados para revisión</p>}
+                        {tipoSol === 'eliminacion' && (
+                          <>
+                            {datos.valor && <p className="sol-precio">{formatPrecio(datos.valor)}</p>}
+                            {datos.motivo && <p style={{ fontSize: '12px', color: '#991B1B', fontStyle: 'italic', margin: '4px 0 0' }}>"{datos.motivo}"</p>}
+                          </>
+                        )}
                         <p className="sol-fecha">{t('enviado')} {formatFecha(s.fecha_solicitud)}</p>
                       </div>
                       <div className="sol-estado">

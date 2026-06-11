@@ -18,6 +18,10 @@ const PropertyDetail = () => {
   const [showEditConfirmModal, setShowEditConfirmModal] = useState(false)
   const [editRequestLoading, setEditRequestLoading] = useState(false)
   const [editJustificacion, setEditJustificacion] = useState('')
+  const [deleteSolicitud, setDeleteSolicitud] = useState(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteMotivo, setDeleteMotivo] = useState('')
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   const fetchProperty = useCallback(async () => {
     if (!id || id === 'undefined') {
@@ -126,6 +130,33 @@ const PropertyDetail = () => {
       alert(parseApiError(err))
     } finally {
       setEditRequestLoading(false)
+    }
+  }
+
+  // Verificar solicitud de eliminación
+  useEffect(() => {
+    if (!authLoading && user && user.rol !== 'admin' && property && property.id_usuario === user.id_usuario) {
+      api.get(`/api/propiedades-pendientes/solicitud-eliminacion/${id}`)
+        .then(res => setDeleteSolicitud(res.data.solicitud))
+        .catch(() => setDeleteSolicitud(null))
+    }
+  }, [user, property, id, authLoading])
+
+  const handleRequestDelete = async () => {
+    setDeleteLoading(true)
+    try {
+      await api.post('/api/propiedades-pendientes/solicitud-eliminacion', {
+        id_inmueble: parseInt(id),
+        motivo: deleteMotivo.trim() || null
+      })
+      const res = await api.get(`/api/propiedades-pendientes/solicitud-eliminacion/${id}`)
+      setDeleteSolicitud(res.data.solicitud)
+      setShowDeleteModal(false)
+      setDeleteMotivo('')
+    } catch (err) {
+      alert(err.response?.data?.error || 'Error al enviar solicitud')
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
@@ -273,6 +304,29 @@ const PropertyDetail = () => {
                 )
               }
               return null
+            })()
+          )}
+          {/* Botón de eliminación para usuario dueño */}
+          {user && user.rol !== 'admin' && property && property.id_usuario === user.id_usuario && (
+            (() => {
+              if (deleteSolicitud?.estado_aprobacion === 'pendiente') {
+                return (
+                  <button disabled className="btn-edit-admin" style={{ opacity: 0.6, cursor: 'not-allowed', background: '#DC2626', color: '#fff', border: 'none' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                    Eliminación pendiente
+                  </button>
+                )
+              }
+              return (
+                <button onClick={() => setShowDeleteModal(true)} className="btn-edit-admin" style={{ background: '#DC2626', color: '#fff', border: 'none' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  </svg>
+                  Solicitar eliminación
+                </button>
+              )
             })()
           )}
           <button className="btn-share">
@@ -605,6 +659,59 @@ const PropertyDetail = () => {
                   }}
                 >
                   {editRequestLoading ? 'Enviando...' : 'Enviar solicitud'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmación para solicitar eliminación */}
+      {showDeleteModal && (
+        <div className="modal-overlay" onClick={() => setShowDeleteModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px' }}>
+            <div className="modal-header">
+              <h2 style={{ color: '#DC2626' }}>Solicitar eliminación</h2>
+              <button className="modal-close" onClick={() => setShowDeleteModal(false)}>✕</button>
+            </div>
+            <div style={{ padding: '20px' }}>
+              <p style={{ fontSize: '14px', color: '#4A3F55', lineHeight: 1.5, margin: '0 0 16px' }}>
+                ¿Estás seguro de que quieres solicitar la eliminación de esta propiedad? Esta acción no se puede deshacer si el administrador la aprueba.
+              </p>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#5A4864', marginBottom: '6px' }}>
+                  Motivo (opcional)
+                </label>
+                <textarea
+                  value={deleteMotivo}
+                  onChange={(e) => setDeleteMotivo(e.target.value)}
+                  placeholder="Ej: La propiedad ya fue vendida..."
+                  rows={3}
+                  style={{
+                    width: '100%', padding: '10px 12px', fontSize: '13px', color: '#241929',
+                    border: '1px solid #e0d8ec', borderRadius: '8px', background: '#F4F0F8',
+                    resize: 'vertical', outline: 'none', fontFamily: 'inherit'
+                  }}
+                />
+              </div>
+              {deleteSolicitud?.estado_aprobacion === 'rechazado' && deleteSolicitud?.motivo_rechazo && (
+                <div style={{ padding: '10px', background: '#FEE2E2', borderRadius: '8px', marginBottom: '12px', fontSize: '12px', color: '#991B1B' }}>
+                  <strong>Rechazo anterior:</strong> {deleteSolicitud.motivo_rechazo}
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => { setShowDeleteModal(false); setDeleteMotivo('') }}
+                  style={{ padding: '8px 16px', fontSize: '12px', background: 'transparent', border: '1px solid #e0d8ec', borderRadius: '8px', cursor: 'pointer', color: '#5A4864' }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleRequestDelete}
+                  disabled={deleteLoading}
+                  style={{ padding: '8px 18px', fontSize: '12px', background: '#DC2626', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                >
+                  {deleteLoading ? 'Enviando...' : 'Confirmar eliminación'}
                 </button>
               </div>
             </div>

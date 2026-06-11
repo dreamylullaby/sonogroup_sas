@@ -50,12 +50,26 @@ export default function AdminSolicitudes() {
 
   useEffect(() => { fetchData() }, [filtroTipo])
 
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState(null)
+
   const handleAprobar = async (id, tipoSolicitud) => {
+    if (tipoSolicitud === 'eliminacion') {
+      setDeleteConfirmTarget(id)
+      return
+    }
     if (tipoSolicitud === 'revision_edicion') {
       await api.put(`/api/propiedades-pendientes/${id}/aprobar-cambios`)
     } else {
       await api.put(`/api/propiedades-pendientes/${id}/aprobar`)
     }
+    setDetailModal(null)
+    fetchData()
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmTarget) return
+    await api.put(`/api/propiedades-pendientes/${deleteConfirmTarget}/aprobar-eliminacion`)
+    setDeleteConfirmTarget(null)
     setDetailModal(null)
     fetchData()
   }
@@ -146,11 +160,14 @@ export default function AdminSolicitudes() {
                       {s.tipo_solicitud === 'edicion' && d.motivo && (
                         <span style={{ color: '#7C3AED', fontStyle: 'italic' }}>"{d.motivo.substring(0, 60)}{d.motivo.length > 60 ? '...' : ''}"</span>
                       )}
-                      {s.tipo_solicitud !== 'edicion' && (
+                      {s.tipo_solicitud === 'eliminacion' && d.motivo && (
+                        <span style={{ color: '#991B1B', fontStyle: 'italic' }}>"{d.motivo.substring(0, 60)}{d.motivo.length > 60 ? '...' : ''}"</span>
+                      )}
+                      {s.tipo_solicitud !== 'edicion' && s.tipo_solicitud !== 'eliminacion' && (
                         <span><MapPin size={10} style={{ display: 'inline', verticalAlign: 'middle' }} /> {d.ubicacion?.municipio || 'Sin ubicación'}</span>
                       )}
-                      {s.id_inmueble && s.tipo_solicitud === 'edicion' && (
-                        <span style={{ color: '#5A4864' }}>Propiedad #{s.id_inmueble}</span>
+                      {s.id_inmueble && (s.tipo_solicitud === 'edicion' || s.tipo_solicitud === 'eliminacion') && (
+                        <span style={{ color: '#5A4864' }}>Propiedad #{s.id_inmueble}{d.tipo_inmueble ? ` · ${d.tipo_inmueble}` : ''}</span>
                       )}
                       {d.valor && <span>$ {Number(d.valor).toLocaleString('es-CO')}</span>}
                       <span>{new Date(s.fecha_solicitud).toLocaleDateString('es-CO')}</span>
@@ -173,8 +190,8 @@ export default function AdminSolicitudes() {
         )}
       </div>
 
-      {/* Detail Modal — different modal for edicion type */}
-      {detailModal && detailModal.tipo_solicitud === 'edicion' && (
+      {/* Detail Modal — edicion and eliminacion use EditSolicitudDetailModal (loads property from API) */}
+      {detailModal && (detailModal.tipo_solicitud === 'edicion' || detailModal.tipo_solicitud === 'eliminacion') && (
         <EditSolicitudDetailModal
           solicitud={detailModal}
           onClose={() => setDetailModal(null)}
@@ -194,7 +211,7 @@ export default function AdminSolicitudes() {
       )}
 
       {/* Detail Modal — property detail for publicacion/revision types */}
-      {detailModal && detailModal.tipo_solicitud !== 'edicion' && (
+      {detailModal && detailModal.tipo_solicitud !== 'edicion' && detailModal.tipo_solicitud !== 'eliminacion' && (
         <PropertyFullDetailModal
           property={{
             ...detailModal.datos,
@@ -243,6 +260,15 @@ export default function AdminSolicitudes() {
         description={`¿Eliminar esta solicitud de ${TIPO_CONFIG[deleteTarget?.tipo_solicitud]?.label || 'publicación'}? Esta acción no se puede deshacer.`}
         onConfirm={() => handleEliminar(deleteTarget.id_solicitud)}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      {/* Delete Confirmation for eliminacion approval */}
+      <DeleteConfirmModal
+        open={!!deleteConfirmTarget}
+        title="Confirmar eliminación de propiedad"
+        description="¿Confirmas que deseas eliminar permanentemente esta propiedad? Esta acción desactiva el inmueble y no se puede deshacer."
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteConfirmTarget(null)}
       />
     </div>
   )
