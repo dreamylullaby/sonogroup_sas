@@ -182,4 +182,35 @@ router.put('/:id', verificarToken, async (req, res) => {
     }
 });
 
+// Eliminar contacto propio (usuario) o cualquiera (admin)
+router.delete('/:id', verificarToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Verificar propiedad del contacto
+        const { data: contacto } = await supabase
+            .from('contactos')
+            .select('id_usuario')
+            .eq('id_contacto', id)
+            .single();
+
+        if (!contacto) return res.status(404).json({ error: 'Mensaje no encontrado' });
+
+        if (contacto.id_usuario !== req.usuario.id_usuario && req.usuario.rol !== 'admin') {
+            return res.status(403).json({ error: 'No tienes permisos para eliminar este mensaje' });
+        }
+
+        const { error } = await supabase
+            .from('contactos')
+            .delete()
+            .eq('id_contacto', id);
+
+        if (error) throw error;
+
+        res.json({ mensaje: 'Mensaje eliminado' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 export default router;

@@ -1,9 +1,10 @@
 import express from 'express';
 import { supabase } from '../../config/supabase.js';
+import jwt from 'jsonwebtoken';
 
 const router = express.Router();
 
-// Crear mensaje de contacto (público)
+// Crear mensaje de contacto (público, pero guarda id_usuario si está logueado)
 router.post('/', async (req, res) => {
     try {
         const { nombre, email, telefono, asunto, mensaje } = req.body;
@@ -12,6 +13,16 @@ router.post('/', async (req, res) => {
             return res.status(400).json({
                 error: 'Nombre, email y mensaje son requeridos'
             });
+        }
+
+        // Intentar extraer usuario del token si existe (no obligatorio)
+        let id_usuario = null;
+        const token = req.headers.authorization?.split(' ')[1];
+        if (token) {
+            try {
+                const decoded = jwt.verify(token, process.env.JWT_SECRET);
+                id_usuario = decoded.id_usuario;
+            } catch { /* Token inválido, seguir como anónimo */ }
         }
 
         const { data, error } = await supabase
@@ -24,7 +35,7 @@ router.post('/', async (req, res) => {
                 mensaje,
                 estado: 'pendiente',
                 id_inmueble: null,
-                id_usuario: null
+                id_usuario
             }])
             .select()
             .single();
