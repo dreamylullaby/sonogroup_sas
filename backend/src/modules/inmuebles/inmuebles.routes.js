@@ -407,6 +407,24 @@ router.post('/', verificarToken, async (req, res) => {
             caracteristicas
         };
 
+        // Validar: solo 1 solicitud de publicación pendiente por tipo_inmueble
+        const { data: solPendiente } = await supabase
+            .from('solicitudes_publicacion')
+            .select('id_solicitud')
+            .eq('id_usuario', req.usuario.id_usuario)
+            .eq('tipo_solicitud', 'publicacion')
+            .eq('estado_aprobacion', 'pendiente')
+            .limit(1)
+            .maybeSingle();
+
+        if (solPendiente) {
+            return res.status(400).json({
+                error: `Ya tienes una solicitud de publicación pendiente. Debes esperar a que el administrador la apruebe o rechace antes de enviar otra.`,
+                codigo: 'SOLICITUD_PENDIENTE',
+                id_solicitud: solPendiente.id_solicitud
+            });
+        }
+
         const { data: solicitud, error: errorInsert } = await supabase
             .from('solicitudes_publicacion')
             .insert([{

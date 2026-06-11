@@ -35,9 +35,13 @@ export default function EditSolicitudDetailModal({ solicitud, onClose, headerAct
         {/* Header */}
         <div className="pdm__header">
           <div className="pdm__header-left">
-            <h2 className="pdm__title">Solicitud de Edición #{solicitud.id_solicitud}</h2>
+            <h2 className="pdm__title">
+              {solicitud.tipo_solicitud === 'eliminacion' ? 'Solicitud de Eliminación' : 'Solicitud de Edición'} #{solicitud.id_solicitud}
+            </h2>
             <div className="pdm__badges">
-              <span style={{ padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 600, color: '#7C3AED', background: '#EDE9FE', textTransform: 'uppercase' }}>Edición</span>
+              <span style={{ padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 600, color: solicitud.tipo_solicitud === 'eliminacion' ? '#991B1B' : '#7C3AED', background: solicitud.tipo_solicitud === 'eliminacion' ? '#FEE2E2' : '#EDE9FE', textTransform: 'uppercase' }}>
+                {solicitud.tipo_solicitud === 'eliminacion' ? 'Eliminación' : 'Edición'}
+              </span>
               <span style={{ padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 600, color: '#D97706', background: '#FEF3C7', textTransform: 'uppercase' }}>{solicitud.estado_aprobacion}</span>
             </div>
           </div>
@@ -49,13 +53,13 @@ export default function EditSolicitudDetailModal({ solicitud, onClose, headerAct
 
         <div className="pdm__body" style={{ padding: '1.25rem 1.5rem' }}>
 
-          {/* SECCIÓN 1: Justificación del usuario (lo más importante) */}
-          <div style={{ marginBottom: '1.25rem', padding: '1rem', background: '#F3EEFF', borderRadius: '10px', borderLeft: '4px solid #7C3AED' }}>
-            <div style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#7C3AED', marginBottom: '6px' }}>
-              Justificación del usuario
+          {/* SECCIÓN 1: Justificación/Motivo del usuario */}
+          <div style={{ marginBottom: '1.25rem', padding: '1rem', background: solicitud.tipo_solicitud === 'eliminacion' ? '#FEF2F2' : '#F3EEFF', borderRadius: '10px', borderLeft: `4px solid ${solicitud.tipo_solicitud === 'eliminacion' ? '#DC2626' : '#7C3AED'}` }}>
+            <div style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: solicitud.tipo_solicitud === 'eliminacion' ? '#DC2626' : '#7C3AED', marginBottom: '6px' }}>
+              {solicitud.tipo_solicitud === 'eliminacion' ? 'Motivo de eliminación' : 'Justificación del usuario'}
             </div>
             <p style={{ fontSize: '13px', color: '#241929', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap' }}>
-              {motivo || 'Sin justificación proporcionada'}
+              {motivo || (solicitud.tipo_solicitud === 'eliminacion' ? 'Sin motivo proporcionado' : 'Sin justificación proporcionada')}
             </p>
           </div>
 
@@ -128,6 +132,7 @@ function PropertyFullInfo({ property, formatPrice }) {
   if (c.cuarto_servicio) amenities.push('Cuarto servicio')
   if (c.bano_servicio) amenities.push('Baño servicio')
   if (c.amoblado) amenities.push('Amoblado')
+  if (c.banos === true) amenities.push('Baño privado')
   if (c.jacuzzi) amenities.push('Jacuzzi')
   if (c.cancha) amenities.push('Cancha')
   if (c.lago_estanque) amenities.push('Lago/Estanque')

@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { api, parseApiError, ENUMS, ENUM_LABELS } from '../../config/api'
 import { buildInmueblePayload } from '../../utils/payloadMappers'
@@ -15,6 +15,7 @@ const CURRENT_YEAR = new Date().getFullYear()
 const PublishProperty = ({ editMode = false, propertyId = null, modoRevision = false }) => {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const formRef = useRef(null)
   const originalDataRef = useRef(null)
   const [loading, setLoading] = useState(false)
@@ -42,9 +43,26 @@ const PublishProperty = ({ editMode = false, propertyId = null, modoRevision = f
   })
 
   const [caract, setCaract] = useState({})
+  const [isReenvio] = useState(() => !!location.state?.reenvioSolicitud)
   const [step4ShowErrors, setStep4ShowErrors] = useState(false)
+  const [solicitudBloqueante, setSolicitudBloqueante] = useState(null)
+
+  // Verificar si el usuario ya tiene una solicitud pendiente (solo para nueva publicación)
+  useEffect(() => {
+    if (!editMode && !isReenvio && user?.rol !== 'admin') {
+      api.get('/api/propiedades-pendientes/puede-solicitar?tipo_solicitud=publicacion')
+        .then(res => {
+          if (!res.data.puede) {
+            setSolicitudBloqueante(res.data.mensaje)
+          }
+        })
+        .catch(() => {})
+    }
+  }, [editMode, isReenvio, user])
+
   useEffect(() => {
     if (editMode && propertyId) loadPropertyData()
+    else if (location.state?.reenvioSolicitud) loadReenvioData(location.state.reenvioSolicitud)
     else loadDraft()
   }, [editMode, propertyId])
 
@@ -76,9 +94,41 @@ const PublishProperty = ({ editMode = false, propertyId = null, modoRevision = f
     }
   }
 
+  // Cargar datos de una solicitud rechazada para reenvío
+  const loadReenvioData = (solicitud) => {
+    const d = solicitud.datos || {}
+    if (d.valor !== undefined) setFormData(prev => ({
+      ...prev,
+      valor: d.valor || '', valor_administracion: d.valor_administracion || '',
+      estrato: d.estrato?.toString() || '3', descripcion: d.descripcion || '',
+      numero_matricula: d.numero_matricula || '', codigo_catastral: d.codigo_catastral || '',
+      tipo_operacion: d.tipo_operacion || 'venta', tipo_inmueble: d.tipo_inmueble || 'casa',
+      estado_inmueble: d.estado_inmueble || 'nuevo', zona: d.zona || 'urbano',
+      acepta_permuta: d.acepta_permuta || false
+    }))
+    if (d.ubicacion) setUbicacion(d.ubicacion)
+    if (d.servicios) setServicios(d.servicios)
+    if (d.caracteristicas) {
+      // Reverse-map backend field names to frontend form names
+      const c = d.caracteristicas
+      const mapped = { ...c }
+      // anio_construccion (BD) → ano_construccion (form)
+      if (c.anio_construccion !== undefined && c.ano_construccion === undefined) {
+        mapped.ano_construccion = c.anio_construccion
+      }
+      // altura_libre (BD) → altura (form for bodega)
+      if (c.altura_libre !== undefined && c.altura === undefined) {
+        mapped.altura = c.altura_libre
+      }
+      // Remove the id_inmueble if present
+      delete mapped.id_inmueble
+      setCaract(mapped)
+    }
+  }
+
   useEffect(() => {
-    if (!editMode) setCaract({})
-  }, [formData.tipo_inmueble, editMode])
+    if (!editMode && !isReenvio) setCaract({})
+  }, [formData.tipo_inmueble, editMode, isReenvio])
 
   useEffect(() => {
     if (currentStep === 4) {
@@ -113,8 +163,8 @@ const PublishProperty = ({ editMode = false, propertyId = null, modoRevision = f
         })
       }
       if (p.caracteristicas) {
-        const { id_inmueble, ...rest } = p.caracteristicas
-        setCaract(rest)
+        const { id_inmueble, anio_construccion, ...rest } = p.caracteristicas
+        setCaract({ ...rest, ano_construccion: anio_construccion || rest.ano_construccion || '' })
       }
 
       // Guardar datos originales para comparación en modo revisión
@@ -133,7 +183,7 @@ const PublishProperty = ({ editMode = false, propertyId = null, modoRevision = f
             municipio: p.ubicaciones?.municipio || '', departamento: p.ubicaciones?.departamento || ''
           },
           servicios: { ...servicios },
-          caract: p.caracteristicas ? (() => { const { id_inmueble: _id, ...r } = p.caracteristicas; return r })() : {}
+          caract: p.caracteristicas ? (() => { const { id_inmueble: _id, anio_construccion: _anio, ...r } = p.caracteristicas; return { ...r, ano_construccion: _anio || r.ano_construccion || '' } })() : {}
         }
       }
     } catch (err) {
@@ -405,6 +455,8 @@ const PublishProperty = ({ editMode = false, propertyId = null, modoRevision = f
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault()
+    // Only submit from step 4
+    if (currentStep !== totalSteps) return
     setStep4ShowErrors(true)
     const result = validateStep(4, { show: true })
     if (!result.isValid) return
@@ -413,7 +465,16 @@ const PublishProperty = ({ editMode = false, propertyId = null, modoRevision = f
     try {
       const payload = buildInmueblePayload({ ...formData }, ubicacion, servicios, caract)
 
-      // Modo revisión: usuario envía cambios para revisión del admin
+      // Reenvío de solicitud rechazada: actualiza la misma solicitud en BD
+      if (isReenvio && location.state?.reenvioSolicitud) {
+        const solicitudId = location.state.reenvioSolicitud.id_solicitud
+        await api.put(`/api/propiedades-pendientes/${solicitudId}/reenviar-corregido`, { datos: payload })
+        setSuccess('Solicitud corregida y reenviada para revisión.')
+        setTimeout(() => navigate('/mis-propiedades'), 1500)
+        return
+      }
+
+      // Modo revisión: usuario envía cambios para revisión del admin (edición de propiedad publicada)
       if (modoRevision && editMode && propertyId) {
         const original = originalDataRef.current
         if (!original) {
@@ -569,13 +630,25 @@ const PublishProperty = ({ editMode = false, propertyId = null, modoRevision = f
     <div className="publish-property-page">
       <div className="publish-container">
         <div className="publish-header">
-          <h1>{modoRevision ? 'Editar Propiedad' : editMode ? 'Editar Propiedad' : 'Publicar Propiedad'}</h1>
-          <p>{modoRevision ? 'Modifica los datos y envía los cambios para revisión del administrador' : editMode ? 'Modifica los datos de tu inmueble' : user?.rol === 'admin' ? 'Publicación directa como administrador' : 'Completa el formulario para enviar a revisión'}</p>
+          <h1>{isReenvio ? 'Corregir y Reenviar' : modoRevision ? 'Editar Propiedad' : editMode ? 'Editar Propiedad' : 'Publicar Propiedad'}</h1>
+          <p>{isReenvio ? 'Corrige los datos según las observaciones del administrador y reenvía' : modoRevision ? 'Modifica los datos y envía los cambios para revisión del administrador' : editMode ? 'Modifica los datos de tu inmueble' : user?.rol === 'admin' ? 'Publicación directa como administrador' : 'Completa el formulario para enviar a revisión'}</p>
         </div>
+
+        {/* Warning banner: solicitud pendiente bloqueante */}
+        {solicitudBloqueante && (
+          <div style={{ margin: '0 0 16px', padding: '12px 16px', background: '#FEF3C7', borderRadius: '10px', borderLeft: '4px solid #D97706', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+            <AlertCircle size={18} color="#D97706" style={{ flexShrink: 0, marginTop: '1px' }} />
+            <div>
+              <p style={{ fontSize: '13px', fontWeight: 600, color: '#92400E', margin: '0 0 4px' }}>Solicitud pendiente</p>
+              <p style={{ fontSize: '12px', color: '#78350F', margin: 0, lineHeight: 1.4 }}>{solicitudBloqueante}</p>
+              <p style={{ fontSize: '11px', color: '#A16207', margin: '6px 0 0' }}>Solo puedes tener una solicitud de publicación pendiente a la vez. Espera a que el administrador la apruebe o rechace.</p>
+            </div>
+          </div>
+        )}
 
         <Stepper currentStep={currentStep} />
 
-        <form onSubmit={handleSubmit} className="publish-form" noValidate ref={formRef}>
+        <form onSubmit={handleSubmit} className="publish-form" noValidate ref={formRef} onKeyDown={(e) => { if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault() }}>
           {success && <div className="success-message">{success}</div>}
           {errors.general && <div className="field__error" style={{ marginBottom: 12 }}><AlertCircle size={12} /> {errors.general}</div>}
 
@@ -620,8 +693,8 @@ const PublishProperty = ({ editMode = false, propertyId = null, modoRevision = f
                   Siguiente <ArrowRight size={12} />
                 </button>
               ) : (
-                <button type="submit" className="btn-next" disabled={loading}>
-                  {loading ? 'Procesando...' : modoRevision ? 'Enviar cambios para revisión' : editMode ? 'Actualizar' : 'Publicar propiedad'} <Send size={12} />
+                <button type="button" className="btn-next" onClick={handleSubmit} disabled={loading || (!!solicitudBloqueante && !editMode && !isReenvio)}>
+                  {loading ? 'Procesando...' : isReenvio ? 'Reenviar para revisión' : modoRevision ? 'Enviar cambios para revisión' : editMode ? 'Actualizar' : 'Publicar propiedad'} <Send size={12} />
                 </button>
               )}
             </div>
