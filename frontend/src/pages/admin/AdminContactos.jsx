@@ -51,11 +51,16 @@ export default function AdminContactos() {
     try {
       const res = await api.get(`/api/admin/contactos/${contacto.id_contacto}`)
       setDetailModal(res.data.contacto)
-      // Actualizar localmente
+      // Actualizar localmente el estado y contadores
       if (contacto.estado === 'pendiente') {
         setContactos(prev => prev.map(c =>
           c.id_contacto === contacto.id_contacto ? { ...c, estado: 'recibido' } : c
         ))
+        setContadores(prev => ({
+          ...prev,
+          pendiente: Math.max(0, (prev.pendiente || 0) - 1),
+          recibido: (prev.recibido || 0) + 1
+        }))
       }
     } catch {
       setDetailModal(contacto)

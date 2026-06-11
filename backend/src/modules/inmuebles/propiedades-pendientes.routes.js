@@ -460,10 +460,14 @@ router.post('/:id/reenviar', verificarToken, async (req, res) => {
 // Crear solicitud de edición (usuario dueño del inmueble)
 router.post('/solicitud-edicion', verificarToken, async (req, res) => {
     try {
-        const { id_inmueble } = req.body;
+        const { id_inmueble, motivo } = req.body;
 
         if (!id_inmueble) {
             return res.status(400).json({ error: 'id_inmueble es requerido' });
+        }
+
+        if (!motivo || motivo.trim().length < 20) {
+            return res.status(400).json({ error: 'La justificación debe tener al menos 20 caracteres' });
         }
 
         // Verificar que el usuario sea dueño del inmueble
@@ -481,20 +485,22 @@ router.post('/solicitud-edicion', verificarToken, async (req, res) => {
             return res.status(403).json({ error: 'No eres el propietario de este inmueble' });
         }
 
-        // Verificar si ya tiene una solicitud de edición activa
+        // Verificar si ya tiene una solicitud de edición activa (pendiente o aprobada)
         const { data: existente } = await supabase
             .from('solicitudes_publicacion')
             .select('id_solicitud, estado_aprobacion')
             .eq('id_usuario', req.usuario.id_usuario)
             .eq('id_inmueble', id_inmueble)
             .eq('tipo_solicitud', 'edicion')
-            .in('estado_aprobacion', ['pendiente', 'recibido'])
+            .in('estado_aprobacion', ['pendiente', 'aprobado'])
             .limit(1)
             .maybeSingle();
 
         if (existente) {
             return res.status(400).json({
-                error: 'Ya tienes una solicitud de edición activa para este inmueble',
+                error: existente.estado_aprobacion === 'aprobado'
+                    ? 'Ya tienes permiso de edición activo para este inmueble'
+                    : 'Ya tienes una solicitud de edición pendiente para este inmueble',
                 solicitud: existente
             });
         }
@@ -505,7 +511,7 @@ router.post('/solicitud-edicion', verificarToken, async (req, res) => {
             .insert([{
                 id_usuario: req.usuario.id_usuario,
                 id_inmueble: id_inmueble,
-                datos: { motivo: req.body.motivo || 'Solicitud de edición de propiedad' },
+                datos: { motivo: motivo.trim() },
                 estado_aprobacion: 'pendiente',
                 tipo_solicitud: 'edicion'
             }])
@@ -552,6 +558,180 @@ router.get('/solicitud-edicion/:id_inmueble', verificarToken, async (req, res) =
 
         res.json({ solicitud: data || null });
     } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Crear solicitud de revisión de edición (usuario envía cambios para revisión)
+router.post('/revision-edicion', verificarToken, async (req, res) => {
+    try {
+        const { id_inmueble, snapshot_cambios } = req.body;
+
+        if (!id_inmueble || !snapshot_cambios) {
+            return res.status(400).json({ error: 'id_inmueble y snapshot_cambios son requeridos' });
+        }
+
+        // Verificar que el usuario sea dueño
+        const { data: inmueble, error: errInm } = await supabase
+            .from('inmuebles')
+            .select('id_usuario')
+            .eq('id_inmueble', id_inmueble)
+            .single();
+
+        if (errInm || !inmueble) {
+            return res.status(404).json({ error: 'Inmueble no encontrado' });
+        }
+
+        if (inmueble.id_usuario !== req.usuario.id_usuario) {
+            return res.status(403).json({ error: 'No eres el propietario de este inmueble' });
+        }
+
+        // Verificar que tenga una solicitud de edición aprobada
+        const { data: edicionAprobada } = await supabase
+            .from('solicitudes_publicacion')
+            .select('id_solicitud')
+            .eq('id_usuario', req.usuario.id_usuario)
+            .eq('id_inmueble', id_inmueble)
+            .eq('tipo_solicitud', 'edicion')
+            .eq('estado_aprobacion', 'aprobado')
+            .limit(1)
+            .maybeSingle();
+
+        if (!edicionAprobada) {
+            return res.status(403).json({ error: 'No tienes permiso de edición activo para este inmueble' });
+        }
+
+        // Obtener snapshot anterior (datos actuales del inmueble)
+        const { data: inmuebleActual } = await supabase
+            .from('inmuebles')
+            .select('*, ubicaciones(*)')
+            .eq('id_inmueble', id_inmueble)
+            .single();
+
+        // Crear solicitud de revisión de edición
+        const { data: solicitud, error: errorInsert } = await supabase
+            .from('solicitudes_publicacion')
+            .insert([{
+                id_usuario: req.usuario.id_usuario,
+                id_inmueble: id_inmueble,
+                datos: snapshot_cambios,
+                estado_aprobacion: 'pendiente',
+                tipo_solicitud: 'revision_edicion',
+                snapshot_datos_rechazo: inmuebleActual // datos ANTES de los cambios
+            }])
+            .select()
+            .single();
+
+        if (errorInsert) throw errorInsert;
+
+        // Marcar la solicitud de edición original como 'en_revision' usando motivo_rechazo como estado auxiliar
+        await supabase
+            .from('solicitudes_publicacion')
+            .update({ motivo_rechazo: 'en_revision' })
+            .eq('id_solicitud', edicionAprobada.id_solicitud);
+
+        // Notificar a admins
+        const { data: admins } = await supabase.from('usuarios').select('id_usuario').eq('rol', 'admin');
+        if (admins && admins.length > 0) {
+            const { data: usr } = await supabase.from('usuarios').select('nombre_completo').eq('id_usuario', req.usuario.id_usuario).single();
+            await supabase.from('notificaciones').insert(
+                admins.map(a => ({
+                    id_usuario: a.id_usuario,
+                    tipo: 'sistema',
+                    titulo: 'Cambios enviados para revisión',
+                    mensaje: `${usr?.nombre_completo || 'Un usuario'} envió cambios para revisión en propiedad #${id_inmueble}.`
+                }))
+            );
+        }
+
+        res.status(201).json({ mensaje: 'Cambios enviados para revisión', solicitud });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Aprobar cambios de revisión de edición (admin aplica los cambios al inmueble)
+router.put('/:id/aprobar-cambios', verificarToken, verificarRol(['admin']), async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const { data: solicitud, error: errGet } = await supabase
+            .from('solicitudes_publicacion')
+            .select('*')
+            .eq('id_solicitud', id)
+            .single();
+
+        if (errGet || !solicitud) {
+            return res.status(404).json({ error: 'Solicitud no encontrada' });
+        }
+
+        if (solicitud.tipo_solicitud !== 'revision_edicion') {
+            return res.status(400).json({ error: 'Esta solicitud no es de revisión de edición' });
+        }
+
+        const cambios = solicitud.datos;
+        const idInmueble = solicitud.id_inmueble;
+
+        // Aplicar cambios al inmueble
+        const datosInmueble = {};
+        if (cambios.valor !== undefined) datosInmueble.valor = parseFloat(cambios.valor);
+        if (cambios.valor_administracion !== undefined) datosInmueble.valor_administracion = cambios.valor_administracion ? parseFloat(cambios.valor_administracion) : null;
+        if (cambios.estrato !== undefined) datosInmueble.estrato = parseInt(cambios.estrato) || null;
+        if (cambios.descripcion !== undefined) datosInmueble.descripcion = cambios.descripcion;
+        if (cambios.numero_matricula !== undefined) datosInmueble.numero_matricula = cambios.numero_matricula;
+        if (cambios.codigo_catastral !== undefined) datosInmueble.codigo_catastral = cambios.codigo_catastral || null;
+        if (cambios.tipo_operacion !== undefined) datosInmueble.tipo_operacion = cambios.tipo_operacion;
+        if (cambios.tipo_inmueble !== undefined) datosInmueble.tipo_inmueble = cambios.tipo_inmueble;
+        if (cambios.estado_inmueble !== undefined) datosInmueble.estado_inmueble = cambios.estado_inmueble;
+        if (cambios.zona !== undefined) datosInmueble.zona = cambios.zona;
+        if (cambios.acepta_permuta !== undefined) datosInmueble.acepta_permuta = cambios.acepta_permuta;
+
+        if (Object.keys(datosInmueble).length > 0) {
+            await supabase.from('inmuebles').update(datosInmueble).eq('id_inmueble', idInmueble);
+        }
+
+        // Actualizar ubicación si viene
+        if (cambios.ubicacion && Object.keys(cambios.ubicacion).length > 0) {
+            const { tipo_via, ...ubicacionLimpia } = cambios.ubicacion;
+            await supabase.from('ubicaciones').update(ubicacionLimpia).eq('id_inmueble', idInmueble);
+        }
+
+        // Actualizar características si vienen
+        if (cambios.caracteristicas && Object.keys(cambios.caracteristicas).length > 0) {
+            const tipoInmueble = cambios.tipo_inmueble || (await supabase.from('inmuebles').select('tipo_inmueble').eq('id_inmueble', idInmueble).single()).data?.tipo_inmueble;
+            const tablaHija = obtenerTablaPorTipo(tipoInmueble);
+            if (tablaHija) {
+                const mapeadas = mapearCaracteristicas(tipoInmueble, cambios.caracteristicas, cambios.servicios);
+                await supabase.from(tablaHija).update(mapeadas).eq('id_inmueble', idInmueble);
+            }
+        }
+
+        // Marcar solicitud de revisión como aprobada
+        await supabase.from('solicitudes_publicacion').update({
+            estado_aprobacion: 'aprobado',
+            admin_revisor: req.usuario.id_usuario,
+            fecha_revision: new Date().toISOString()
+        }).eq('id_solicitud', id);
+
+        // Marcar la solicitud de edición original como completada (limpiar flag en_revision)
+        await supabase.from('solicitudes_publicacion').update({
+            motivo_rechazo: null
+        }).eq('id_usuario', solicitud.id_usuario)
+          .eq('id_inmueble', idInmueble)
+          .eq('tipo_solicitud', 'edicion')
+          .eq('estado_aprobacion', 'aprobado');
+
+        // Notificar al usuario
+        await supabase.from('notificaciones').insert([{
+            id_usuario: solicitud.id_usuario,
+            tipo: 'aprobacion',
+            titulo: 'Cambios aprobados',
+            mensaje: `Tus cambios en la propiedad #${idInmueble} fueron aprobados y ya están publicados.`
+        }]);
+
+        res.json({ mensaje: 'Cambios aprobados y aplicados' });
+    } catch (error) {
+        console.error('❌ Error al aprobar cambios:', error);
         res.status(500).json({ error: error.message });
     }
 });

@@ -45,7 +45,7 @@ async function marcarNoResueltos() {
     }
 }
 
-// GET /api/admin/contactos — lista con filtro ?estado= y contadores
+// GET /api/admin/contactos — lista con filtro ?estado= y contadores GLOBALES
 router.get('/', verificarToken, verificarRol(['admin']), async (req, res) => {
     try {
         // Ejecutar detección de no resueltos antes de retornar
@@ -53,7 +53,8 @@ router.get('/', verificarToken, verificarRol(['admin']), async (req, res) => {
 
         const { estado } = req.query;
 
-        let query = supabase
+        // Siempre obtener TODOS para calcular contadores globales
+        const { data: todos, error: errAll } = await supabase
             .from('contactos')
             .select(`
                 *,
@@ -62,25 +63,25 @@ router.get('/', verificarToken, verificarRol(['admin']), async (req, res) => {
             `)
             .order('fecha_contacto', { ascending: false });
 
-        if (estado) {
-            query = query.eq('estado', estado);
-        }
+        if (errAll) throw errAll;
 
-        const { data, error } = await query;
-        if (error) throw error;
+        const allData = todos || [];
 
-        // Calcular contadores
-        const todos = data || [];
+        // Contadores globales (siempre sobre TODOS, sin importar el filtro)
         const contadores = {
-            pendiente: todos.filter(c => c.estado === 'pendiente').length,
-            recibido: todos.filter(c => c.estado === 'recibido').length,
-            no_resuelto: todos.filter(c => c.estado === 'no_resuelto').length,
-            resuelto: todos.filter(c => c.estado === 'resuelto').length,
-            total: todos.length
+            pendiente: allData.filter(c => c.estado === 'pendiente').length,
+            recibido: allData.filter(c => c.estado === 'recibido').length,
+            no_resuelto: allData.filter(c => c.estado === 'no_resuelto').length,
+            resuelto: allData.filter(c => c.estado === 'resuelto').length,
+            total: allData.length
         };
 
-        // Si se filtró por estado, refiltrar (ya lo hizo supabase, pero por seguridad)
-        res.json({ contactos: data || [], contadores });
+        // Filtrar para la respuesta si se pidió un estado específico
+        const contactos = estado
+            ? allData.filter(c => c.estado === estado)
+            : allData;
+
+        res.json({ contactos, contadores });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -107,16 +108,20 @@ router.get('/:id', verificarToken, verificarRol(['admin']), async (req, res) => 
 
         // Marcar como recibido si era pendiente
         if (contacto.estado === 'pendiente') {
-            await supabase
+            const updateData = { estado: 'recibido' };
+            // Intentar guardar fecha_vista (puede no existir la columna aún)
+            try {
+                updateData.fecha_vista = new Date().toISOString();
+            } catch (_) {}
+
+            const { error: errUpdate } = await supabase
                 .from('contactos')
-                .update({
-                    estado: 'recibido',
-                    fecha_vista: new Date().toISOString()
-                })
+                .update(updateData)
                 .eq('id_contacto', id);
 
-            contacto.estado = 'recibido';
-            contacto.fecha_vista = new Date().toISOString();
+            if (!errUpdate) {
+                contacto.estado = 'recibido';
+            }
         }
 
         res.json({ contacto });

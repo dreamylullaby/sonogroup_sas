@@ -16,6 +16,7 @@ const PropertyDetail = () => {
   const [editSolicitud, setEditSolicitud] = useState(null)
   const [showEditConfirmModal, setShowEditConfirmModal] = useState(false)
   const [editRequestLoading, setEditRequestLoading] = useState(false)
+  const [editJustificacion, setEditJustificacion] = useState('')
 
   const fetchProperty = useCallback(async () => {
     if (!id || id === 'undefined') {
@@ -96,13 +97,18 @@ const PropertyDetail = () => {
   }, [user, property, id, authLoading])
 
   const handleRequestEdit = async () => {
+    if (editJustificacion.trim().length < 20) return
     setEditRequestLoading(true)
     try {
-      await api.post('/api/propiedades-pendientes/solicitud-edicion', { id_inmueble: parseInt(id) })
+      await api.post('/api/propiedades-pendientes/solicitud-edicion', {
+        id_inmueble: parseInt(id),
+        motivo: editJustificacion.trim()
+      })
       // Refrescar estado
       const res = await api.get(`/api/propiedades-pendientes/solicitud-edicion/${id}`)
       setEditSolicitud(res.data.solicitud)
       setShowEditConfirmModal(false)
+      setEditJustificacion('')
     } catch (err) {
       alert(parseApiError(err))
     } finally {
@@ -200,6 +206,17 @@ const PropertyDetail = () => {
           {/* Botón de edición para usuario dueño */}
           {user && user.rol !== 'admin' && property && property.id_usuario === user.id_usuario && (
             (() => {
+              // Si existe solicitud revision_edicion pendiente, mostrar "Cambios en revisión"
+              if (editSolicitud?.estado_aprobacion === 'aprobado' && editSolicitud?.motivo_rechazo === 'en_revision') {
+                return (
+                  <button disabled className="btn-edit-admin" style={{ opacity: 0.6, cursor: 'not-allowed', background: '#F59E0B', color: '#fff', border: 'none' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                    Cambios en revisión
+                  </button>
+                )
+              }
               if (!editSolicitud || editSolicitud.estado_aprobacion === 'rechazado' || editSolicitud.estado_aprobacion === 'no_resuelto') {
                 return (
                   <button onClick={() => setShowEditConfirmModal(true)} className="btn-edit-admin" style={{ background: '#6B3FA0', color: '#fff', border: 'none' }}>
@@ -511,7 +528,7 @@ const PropertyDetail = () => {
       {/* Modal de confirmación para solicitar edición */}
       {showEditConfirmModal && (
         <div className="modal-overlay" onClick={() => setShowEditConfirmModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '420px' }}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px' }}>
             <div className="modal-header">
               <h2>Solicitar edición</h2>
               <button className="modal-close" onClick={() => setShowEditConfirmModal(false)}>✕</button>
@@ -520,17 +537,48 @@ const PropertyDetail = () => {
               <p style={{ fontSize: '14px', color: '#4A3F55', lineHeight: 1.5, margin: '0 0 16px' }}>
                 Para editar tu propiedad debes enviar una solicitud al administrador. Una vez aprobada podrás modificar los datos.
               </p>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#5A4864', marginBottom: '6px' }}>
+                  Describe brevemente qué quieres modificar <span style={{ color: '#CC1E2B' }}>*</span>
+                </label>
+                <textarea
+                  value={editJustificacion}
+                  onChange={(e) => setEditJustificacion(e.target.value)}
+                  placeholder="Ej: Necesito actualizar el precio y agregar nuevas fotos..."
+                  rows={3}
+                  style={{
+                    width: '100%', padding: '10px 12px', fontSize: '13px', color: '#241929',
+                    border: '1px solid #e0d8ec', borderRadius: '8px', background: '#F4F0F8',
+                    resize: 'vertical', outline: 'none', fontFamily: 'inherit'
+                  }}
+                  autoFocus
+                />
+                {editJustificacion.trim().length > 0 && editJustificacion.trim().length < 20 && (
+                  <p style={{ fontSize: '11px', color: '#8C1132', marginTop: '4px' }}>Mínimo 20 caracteres</p>
+                )}
+              </div>
+              {editSolicitud?.estado_aprobacion === 'rechazado' && editSolicitud?.motivo_rechazo && (
+                <div style={{ padding: '10px', background: '#FEE2E2', borderRadius: '8px', marginBottom: '12px', fontSize: '12px', color: '#991B1B' }}>
+                  <strong>Motivo del rechazo anterior:</strong> {editSolicitud.motivo_rechazo}
+                </div>
+              )}
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                 <button
-                  onClick={() => setShowEditConfirmModal(false)}
+                  onClick={() => { setShowEditConfirmModal(false); setEditJustificacion('') }}
                   style={{ padding: '8px 16px', fontSize: '12px', background: 'transparent', border: '1px solid #e0d8ec', borderRadius: '8px', cursor: 'pointer', color: '#5A4864' }}
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleRequestEdit}
-                  disabled={editRequestLoading}
-                  style={{ padding: '8px 18px', fontSize: '12px', background: '#6B3FA0', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                  disabled={editRequestLoading || editJustificacion.trim().length < 20}
+                  style={{
+                    padding: '8px 18px', fontSize: '12px',
+                    background: editJustificacion.trim().length >= 20 ? '#6B3FA0' : '#e0d8ec',
+                    color: editJustificacion.trim().length >= 20 ? '#fff' : '#8097B7',
+                    border: 'none', borderRadius: '8px',
+                    cursor: editJustificacion.trim().length >= 20 ? 'pointer' : 'not-allowed'
+                  }}
                 >
                   {editRequestLoading ? 'Enviando...' : 'Enviar solicitud'}
                 </button>

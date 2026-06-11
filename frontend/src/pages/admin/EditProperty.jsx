@@ -7,14 +7,15 @@ const EditProperty = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
 
-  // Admin puede editar cualquier propiedad
-  // Usuarios dueños pueden editar si tienen solicitud aprobada (verificado en backend)
   if (!user) {
     navigate('/')
     return null
   }
 
-  return <PublishProperty editMode={true} propertyId={id} />
+  // Admin edita directamente, usuario edita en modo revisión
+  const modoRevision = user.rol !== 'admin'
+
+  return <PublishProperty editMode={true} propertyId={id} modoRevision={modoRevision} />
 }
 
 export default EditProperty

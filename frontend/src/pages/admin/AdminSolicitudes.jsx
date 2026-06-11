@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react'
 import { FileText, Eye, Check, X, MapPin, Trash2, User } from 'lucide-react'
 import { api } from '../../config/api'
 import PropertyFullDetailModal from '../../components/admin/shared/PropertyFullDetailModal'
+import EditSolicitudDetailModal from '../../components/admin/shared/EditSolicitudDetailModal'
 import RejectModal from '../../components/admin/shared/RejectModal'
 
 const TIPO_CONFIG = {
   publicacion: { label: 'Publicación', color: '#2563EB', bg: '#DBEAFE' },
   eliminacion: { label: 'Eliminación', color: '#991B1B', bg: '#FEE2E2' },
-  edicion: { label: 'Edición', color: '#7C3AED', bg: '#EDE9FE' }
+  edicion: { label: 'Edición', color: '#7C3AED', bg: '#EDE9FE' },
+  revision_edicion: { label: 'Revisión cambios', color: '#B45309', bg: '#FEF3C7' }
 }
 
 const ESTADO_CONFIG = {
@@ -46,8 +48,12 @@ export default function AdminSolicitudes() {
 
   useEffect(() => { fetchData() }, [filtroTipo])
 
-  const handleAprobar = async (id) => {
-    await api.put(`/api/propiedades-pendientes/${id}/aprobar`)
+  const handleAprobar = async (id, tipoSolicitud) => {
+    if (tipoSolicitud === 'revision_edicion') {
+      await api.put(`/api/propiedades-pendientes/${id}/aprobar-cambios`)
+    } else {
+      await api.put(`/api/propiedades-pendientes/${id}/aprobar`)
+    }
     setDetailModal(null)
     fetchData()
   }
@@ -85,6 +91,7 @@ export default function AdminSolicitudes() {
           { key: 'publicacion', label: 'Publicación' },
           { key: 'eliminacion', label: 'Eliminación' },
           { key: 'edicion', label: 'Edición' },
+          { key: 'revision_edicion', label: 'Revisión cambios' },
         ].map(f => (
           <button
             key={f.key}
@@ -131,7 +138,15 @@ export default function AdminSolicitudes() {
                         <User size={10} /> {usuario.nombre || 'Usuario'}
                       </span>
                       {usuario.email && <span style={{ color: '#8097B7' }}>{usuario.email}</span>}
-                      <span><MapPin size={10} style={{ display: 'inline', verticalAlign: 'middle' }} /> {d.ubicacion?.municipio || 'Sin ubicación'}</span>
+                      {s.tipo_solicitud === 'edicion' && d.motivo && (
+                        <span style={{ color: '#7C3AED', fontStyle: 'italic' }}>"{d.motivo.substring(0, 60)}{d.motivo.length > 60 ? '...' : ''}"</span>
+                      )}
+                      {s.tipo_solicitud !== 'edicion' && (
+                        <span><MapPin size={10} style={{ display: 'inline', verticalAlign: 'middle' }} /> {d.ubicacion?.municipio || 'Sin ubicación'}</span>
+                      )}
+                      {s.id_inmueble && s.tipo_solicitud === 'edicion' && (
+                        <span style={{ color: '#5A4864' }}>Propiedad #{s.id_inmueble}</span>
+                      )}
                       {d.valor && <span>$ {Number(d.valor).toLocaleString('es-CO')}</span>}
                       <span>{new Date(s.fecha_solicitud).toLocaleDateString('es-CO')}</span>
                     </div>
@@ -140,7 +155,7 @@ export default function AdminSolicitudes() {
                     <button className="admin-btn admin-btn--ghost" title="Ver detalles" onClick={() => setDetailModal(s)}><Eye size={13} /></button>
                     {s.estado_aprobacion === 'pendiente' && (
                       <>
-                        <button className="admin-btn admin-btn--success admin-btn--sm" onClick={() => handleAprobar(s.id_solicitud)}><Check size={12} /> Aprobar</button>
+                        <button className="admin-btn admin-btn--success admin-btn--sm" onClick={() => handleAprobar(s.id_solicitud, s.tipo_solicitud)}><Check size={12} /> Aprobar</button>
                         <button className="admin-btn admin-btn--danger admin-btn--sm" onClick={() => setRejectTarget(s)}><X size={12} /> Rechazar</button>
                       </>
                     )}
@@ -153,8 +168,28 @@ export default function AdminSolicitudes() {
         )}
       </div>
 
-      {/* Detail Modal */}
-      {detailModal && (
+      {/* Detail Modal — different modal for edicion type */}
+      {detailModal && detailModal.tipo_solicitud === 'edicion' && (
+        <EditSolicitudDetailModal
+          solicitud={detailModal}
+          onClose={() => setDetailModal(null)}
+          headerActions={
+            detailModal.estado_aprobacion === 'pendiente' ? (
+              <>
+                <button className="admin-btn admin-btn--success admin-btn--sm" onClick={() => handleAprobar(detailModal.id_solicitud, detailModal.tipo_solicitud)}>
+                  <Check size={12} /> Aprobar
+                </button>
+                <button className="admin-btn admin-btn--danger admin-btn--sm" onClick={() => { setDetailModal(null); setRejectTarget(detailModal) }}>
+                  <X size={12} /> Rechazar
+                </button>
+              </>
+            ) : null
+          }
+        />
+      )}
+
+      {/* Detail Modal — property detail for publicacion/revision types */}
+      {detailModal && detailModal.tipo_solicitud !== 'edicion' && (
         <PropertyFullDetailModal
           property={{
             ...detailModal.datos,
@@ -170,7 +205,7 @@ export default function AdminSolicitudes() {
           headerActions={
             detailModal.estado_aprobacion === 'pendiente' ? (
               <>
-                <button className="admin-btn admin-btn--success admin-btn--sm" onClick={() => handleAprobar(detailModal.id_solicitud)}>
+                <button className="admin-btn admin-btn--success admin-btn--sm" onClick={() => handleAprobar(detailModal.id_solicitud, detailModal.tipo_solicitud)}>
                   <Check size={12} /> Aprobar
                 </button>
                 <button className="admin-btn admin-btn--danger admin-btn--sm" onClick={() => { setDetailModal(null); setRejectTarget(detailModal) }}>
