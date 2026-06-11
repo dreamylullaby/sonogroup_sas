@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { usePreferences } from '../../context/PreferencesContext'
 import { api, parseApiError } from '../../config/api'
@@ -17,7 +17,7 @@ const Contact = () => {
   })
 
   // Pre-fill from user data when available
-  useState(() => {
+  useEffect(() => {
     if (user) {
       setFormData(prev => ({
         ...prev,
@@ -32,7 +32,7 @@ const Contact = () => {
         }
       }).catch(() => {})
     }
-  })
+  }, [user])
 
   const handleChange = e => {
     const { name, value } = e.target
@@ -108,7 +108,8 @@ const Contact = () => {
                 <div className="form-group">
                   <label htmlFor="telefono">{t('telefonoLabel')}</label>
                   <input type="tel" id="telefono" name="telefono" value={formData.telefono}
-                    onChange={handleChange} disabled={loading} />
+                    onChange={e => { const v = e.target.value.replace(/[^0-9+\-\s()]/g, ''); setFormData(prev => ({ ...prev, telefono: v })) }}
+                    disabled={loading} placeholder="3001234567" />
                 </div>
                 <div className="form-group">
                   <label htmlFor="asunto">{t('asuntoLabel')} *</label>

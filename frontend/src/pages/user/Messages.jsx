@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { api, parseApiError } from '../../config/api'
-import { MessageCircle, ChevronDown, CheckCircle, XCircle, Clock, AlertCircle, Send } from 'lucide-react'
+import { MessageCircle, ChevronDown, CheckCircle, XCircle, Clock, AlertCircle, Send, Search, Trash2 } from 'lucide-react'
 import '../../styles/pages/Messages.css'
 
-const ITEMS_PER_PAGE = 5
+const ITEMS_PER_PAGE = 10
 
 const Messages = () => {
   const { user } = useAuth()
@@ -13,6 +13,12 @@ const Messages = () => {
   const [error, setError] = useState(null)
   const [expandedId, setExpandedId] = useState(null)
   const [page, setPage] = useState(1)
+  const [deleteModal, setDeleteModal] = useState(null)
+
+  // Filters
+  const [search, setSearch] = useState('')
+  const [filterEstado, setFilterEstado] = useState('')
+  const [filterAsunto, setFilterAsunto] = useState('')
 
   useEffect(() => { if (user) cargarDatos() }, [user])
 
@@ -28,9 +34,25 @@ const Messages = () => {
     }
   }
 
-  const formatFecha = (f) => f
-    ? new Date(f).toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-    : '—'
+  const eliminarMensaje = async (id) => {
+    try {
+      await api.delete(`/api/contactos/${id}`)
+      setMensajes(prev => prev.filter(m => m.id_contacto !== id))
+      setDeleteModal(null)
+    } catch (err) {
+      setError(parseApiError(err))
+      setDeleteModal(null)
+    }
+  }
+
+  const formatFecha = (f) => {
+    if (!f) return '—'
+    return new Date(f).toLocaleString('es-CO', {
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: true,
+      timeZone: 'America/Bogota'
+    })
+  }
 
   const getEstadoConfig = (estado) => {
     const map = {
@@ -44,8 +66,27 @@ const Messages = () => {
     return map[estado] || map.pendiente
   }
 
-  const totalPages = Math.ceil(mensajes.length / ITEMS_PER_PAGE)
-  const paginados = mensajes.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE)
+  // Filtered messages
+  const filtered = useMemo(() => {
+    let items = mensajes
+    if (search) {
+      const q = search.toLowerCase().trim()
+      items = items.filter(m =>
+        (m.asunto || '').toLowerCase().includes(q) ||
+        (m.mensaje || '').toLowerCase().includes(q) ||
+        (m.respuesta || '').toLowerCase().includes(q) ||
+        (m.respuesta_admin || '').toLowerCase().includes(q)
+      )
+    }
+    if (filterEstado) items = items.filter(m => m.estado === filterEstado)
+    if (filterAsunto) items = items.filter(m => (m.asunto || '').toLowerCase().includes(filterAsunto.toLowerCase()))
+    return items
+  }, [mensajes, search, filterEstado, filterAsunto])
+
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE)
+  const paginados = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE)
+
+  const resetFilters = () => { setSearch(''); setFilterEstado(''); setFilterAsunto(''); setPage(1) }
 
   if (loading) return (
     <div className="msg-page"><div className="msg-container"><div className="msg-loading"><p>Cargando mensajes...</p></div></div></div>
@@ -63,11 +104,45 @@ const Messages = () => {
 
         {error && <div className="msg-error"><AlertCircle size={14} /> {error}</div>}
 
-        {mensajes.length === 0 ? (
+        {/* FILTERS */}
+        <div className="msg-filters">
+          <div className="msg-filters-left">
+            <div className="msg-search-wrap">
+              <Search size={13} />
+              <input type="text" placeholder="Buscar por asunto o contenido..." value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} />
+            </div>
+            <select value={filterEstado} onChange={e => { setFilterEstado(e.target.value); setPage(1) }}>
+              <option value="">Todos los estados</option>
+              <option value="pendiente">Pendientes</option>
+              <option value="respondido">Respondidos</option>
+              <option value="resuelto">Resueltos</option>
+              <option value="no_resuelto">Sin resolver</option>
+              <option value="cerrado">Cerrados</option>
+            </select>
+            <select value={filterAsunto} onChange={e => { setFilterAsunto(e.target.value); setPage(1) }}>
+              <option value="">Tipo de consulta</option>
+              <option value="consulta-general">Consulta General</option>
+              <option value="informacion-propiedad">Información Propiedad</option>
+              <option value="agendar-visita">Agendar Visita</option>
+              <option value="cotizacion">Cotización</option>
+              <option value="vender-propiedad">Vender Propiedad</option>
+              <option value="arrendar-propiedad">Arrendar Propiedad</option>
+              <option value="asesoria-inversion">Asesoría Inversión</option>
+              <option value="financiamiento">Financiamiento</option>
+              <option value="queja-reclamo">Queja o Reclamo</option>
+              <option value="otro">Otro</option>
+            </select>
+            {(search || filterEstado || filterAsunto) && (
+              <button className="msg-filter-reset" onClick={resetFilters}>Limpiar</button>
+            )}
+          </div>
+        </div>
+
+        {filtered.length === 0 ? (
           <div className="msg-empty">
             <MessageCircle size={40} strokeWidth={1.5} />
-            <h3>No tienes mensajes</h3>
-            <p>Cuando envíes una consulta desde Contáctanos, aparecerá aquí con su respuesta</p>
+            <h3>{mensajes.length === 0 ? 'No tienes mensajes' : 'Sin resultados'}</h3>
+            <p>{mensajes.length === 0 ? 'Cuando envíes una consulta desde Contáctanos, aparecerá aquí con su respuesta' : 'Intenta con otros filtros'}</p>
           </div>
         ) : (
           <>
@@ -100,13 +175,11 @@ const Messages = () => {
                     {isOpen && (
                       <div className="msg-card-detail">
                         <div className="msg-conversation">
-                          {/* Mensaje del usuario */}
                           <div className="msg-bubble msg-bubble--user">
                             <span className="msg-bubble-label">Tú · {formatFecha(m.fecha_contacto)}</span>
                             <p>{m.mensaje}</p>
                           </div>
 
-                          {/* Respuesta del admin */}
                           {tieneRespuesta ? (
                             <div className="msg-bubble msg-bubble--admin">
                               <span className="msg-bubble-label">Sonogroup · {formatFecha(m.fecha_respuesta)}</span>
@@ -120,14 +193,11 @@ const Messages = () => {
                           )}
                         </div>
 
-                        {m.id_inmueble && m.inmuebles && (
-                          <div className="msg-property-ref">
-                            <span className="msg-detail-label">Propiedad asociada</span>
-                            <span className="msg-detail-value">
-                              {m.inmuebles.tipo_inmueble} · {m.inmuebles.tipo_operacion}
-                            </span>
-                          </div>
-                        )}
+                        <div className="msg-card-actions">
+                          <button className="msg-delete-btn" onClick={(e) => { e.stopPropagation(); setDeleteModal(m) }}>
+                            <Trash2 size={12} /> Eliminar mensaje
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -145,6 +215,21 @@ const Messages = () => {
           </>
         )}
       </div>
+
+      {/* DELETE MODAL */}
+      {deleteModal && (
+        <div className="msg-modal-overlay">
+          <div className="msg-modal">
+            <div className="msg-modal-icon"><Trash2 size={22} color="#CC1E2B" /></div>
+            <h3>¿Eliminar este mensaje?</h3>
+            <p>El mensaje será eliminado permanentemente de tu historial. Esta acción no se puede deshacer.</p>
+            <div className="msg-modal-actions">
+              <button className="msg-modal-btn-delete" onClick={() => eliminarMensaje(deleteModal.id_contacto)}>Sí, eliminar</button>
+              <button className="msg-modal-btn-cancel" onClick={() => setDeleteModal(null)}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -350,3 +350,174 @@
   justify-content: space-between;
   align-items: center;
 }
+
+/* Filters */
+.msg-filters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+
+.msg-filters-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.msg-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  border: 0.5px solid #e0d8ec;
+  border-radius: 8px;
+  padding: 6px 12px;
+  min-width: 200px;
+  max-width: 260px;
+}
+
+.msg-search-wrap input {
+  border: none;
+  outline: none;
+  background: none;
+  font-size: 12px;
+  color: #241929;
+  width: 100%;
+}
+
+.msg-search-wrap input::placeholder { color: #8097B7; }
+.msg-search-wrap svg { color: #8097B7; flex-shrink: 0; }
+
+.msg-filters select {
+  padding: 6px 10px;
+  border: 0.5px solid #e0d8ec;
+  border-radius: 8px;
+  font-size: 11px;
+  color: #5A4864;
+  background: #fff;
+  outline: none;
+  cursor: pointer;
+}
+
+.msg-filter-reset {
+  padding: 6px 10px;
+  border: none;
+  background: none;
+  font-size: 11px;
+  color: #CC1E2B;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+/* Card actions */
+.msg-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 0.5px solid #f0f0f0;
+}
+
+.msg-delete-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border: 0.5px solid #f0b8c4;
+  border-radius: 6px;
+  background: transparent;
+  color: #8C1132;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.msg-delete-btn:hover { background: #FCE8EC; }
+
+/* Delete modal */
+.msg-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 27, 46, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1rem;
+}
+
+.msg-modal {
+  background: #fff;
+  border-radius: 14px;
+  padding: 28px;
+  max-width: 380px;
+  width: 100%;
+  border: 0.5px solid #e0d8ec;
+  text-align: center;
+}
+
+.msg-modal-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #FCE8EC;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+}
+
+.msg-modal h3 {
+  font-size: 16px;
+  font-weight: 500;
+  color: #241929;
+  margin: 0 0 8px;
+}
+
+.msg-modal p {
+  font-size: 13px;
+  color: #5A4864;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.msg-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.msg-modal-btn-delete {
+  width: 100%;
+  padding: 10px;
+  background: transparent;
+  color: #8C1132;
+  border: 0.5px solid #f0b8c4;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.msg-modal-btn-delete:hover { background: #FCE8EC; }
+
+.msg-modal-btn-cancel {
+  width: 100%;
+  padding: 10px;
+  background: #F4F0F8;
+  color: #5A4864;
+  border: 0.5px solid #e0d8ec;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.msg-modal-btn-cancel:hover { background: #e0d8ec; }
