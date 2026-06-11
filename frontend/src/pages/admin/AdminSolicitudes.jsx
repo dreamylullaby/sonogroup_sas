@@ -1,83 +1,167 @@
 import { useState, useEffect } from 'react'
-import { FileText, Eye, Check, X, MapPin, Trash2, User, AlertTriangle } from 'lucide-react'
+import { FileText, Eye, Check, X, MapPin, Trash2, User } from 'lucide-react'
 import { api } from '../../config/api'
 import PropertyFullDetailModal from '../../components/admin/shared/PropertyFullDetailModal'
+import EditSolicitudDetailModal from '../../components/admin/shared/EditSolicitudDetailModal'
+import RejectModal from '../../components/admin/shared/RejectModal'
+import DeleteConfirmModal from '../../components/admin/shared/DeleteConfirmModal'
+
+const TIPO_CONFIG = {
+  publicacion: { label: 'Publicación', color: '#2563EB', bg: '#DBEAFE' },
+  eliminacion: { label: 'Eliminación', color: '#991B1B', bg: '#FEE2E2' },
+  edicion: { label: 'Edición', color: '#7C3AED', bg: '#EDE9FE' },
+  revision_edicion: { label: 'Revisión cambios', color: '#B45309', bg: '#FEF3C7' }
+}
+
+const ESTADO_CONFIG = {
+  pendiente: { label: 'Pendiente', color: '#D97706', bg: '#FEF3C7' },
+  aprobado: { label: 'Aprobado', color: '#059669', bg: '#D1FAE5' },
+  rechazado: { label: 'Rechazado', color: '#DC2626', bg: '#FEE2E2' }
+}
+
+function Badge({ config }) {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center',
+      padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 600,
+      color: config.color, background: config.bg, textTransform: 'uppercase', letterSpacing: '0.03em'
+    }}>
+      {config.label}
+    </span>
+  )
+}
 
 export default function AdminSolicitudes() {
   const [solicitudes, setSolicitudes] = useState([])
   const [loading, setLoading] = useState(true)
   const [detailModal, setDetailModal] = useState(null)
-  const [rechazoModal, setRechazoModal] = useState(null)
-  const [motivoRechazo, setMotivoRechazo] = useState('')
+  const [rejectTarget, setRejectTarget] = useState(null)
+  const [filtroTipo, setFiltroTipo] = useState('todas')
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   const fetchData = () => {
     setLoading(true)
-    api.get('/api/propiedades-pendientes').then(res => setSolicitudes(res.data.propiedades || [])).catch(() => {}).finally(() => setLoading(false))
+    const params = filtroTipo !== 'todas' ? `?tipo=${filtroTipo}` : ''
+    api.get(`/api/propiedades-pendientes${params}`)
+      .then(res => setSolicitudes(res.data.propiedades || []))
+      .catch(() => {})
+      .finally(() => setLoading(false))
   }
-  useEffect(() => { fetchData() }, [])
 
-  const handleAprobar = async (id) => {
-    await api.put(`/api/propiedades-pendientes/${id}/aprobar`)
+  useEffect(() => { fetchData() }, [filtroTipo])
+
+  const handleAprobar = async (id, tipoSolicitud) => {
+    if (tipoSolicitud === 'revision_edicion') {
+      await api.put(`/api/propiedades-pendientes/${id}/aprobar-cambios`)
+    } else {
+      await api.put(`/api/propiedades-pendientes/${id}/aprobar`)
+    }
     setDetailModal(null)
     fetchData()
   }
 
-  const handleRechazar = async (id) => {
-    if (!motivoRechazo.trim()) return
-    await api.put(`/api/propiedades-pendientes/${id}/rechazar`, { motivo: motivoRechazo.trim() })
-    setRechazoModal(null)
-    setMotivoRechazo('')
+  const handleRechazar = async (motivo) => {
+    if (!rejectTarget) return
+    await api.put(`/api/propiedades-pendientes/${rejectTarget.id_solicitud}/rechazar`, { motivo })
+    setRejectTarget(null)
     setDetailModal(null)
     fetchData()
   }
 
   const handleEliminar = async (id) => {
-    if (!window.confirm('Eliminar esta solicitud permanentemente?')) return
     await api.delete(`/api/propiedades-pendientes/${id}`)
+    setDeleteTarget(null)
     fetchData()
   }
 
-  const pendientes = solicitudes.filter(s => s.estado_aprobacion === 'pendiente')
+  const pendientes = solicitudes.filter(s => s.estado_aprobacion === 'pendiente').length
 
   return (
     <div>
       <div className="admin-page__header">
         <h1 className="admin-page__title">Solicitudes</h1>
-        <p className="admin-page__subtitle">Revisa solicitudes de publicacion · <span style={{ color: '#6B3FA0', fontWeight: 600 }}>{pendientes.length} pendientes</span></p>
+        <p className="admin-page__subtitle">
+          Revisa solicitudes de publicación, edición y eliminación ·
+          <span style={{ color: '#D97706', fontWeight: 600 }}> {pendientes} pendientes</span>
+        </p>
+      </div>
+
+      {/* Tabs de filtro por TIPO */}
+      <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', flexWrap: 'wrap' }}>
+        {[
+          { key: 'todas', label: 'Todas' },
+          { key: 'publicacion', label: 'Publicación' },
+          { key: 'eliminacion', label: 'Eliminación' },
+          { key: 'edicion', label: 'Edición' },
+          { key: 'revision_edicion', label: 'Revisión cambios' },
+        ].map(f => (
+          <button
+            key={f.key}
+            onClick={() => setFiltroTipo(f.key)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '4px',
+              padding: '5px 12px', fontSize: '11px', fontWeight: 500,
+              border: filtroTipo === f.key ? '1px solid #6B3FA0' : '1px solid #e0d8ec',
+              background: filtroTipo === f.key ? '#F3EEFF' : '#fff',
+              color: filtroTipo === f.key ? '#6B3FA0' : '#5A4864',
+              borderRadius: '16px', cursor: 'pointer'
+            }}
+          >
+            {f.label}
+          </button>
+        ))}
       </div>
 
       <div className="admin-card">
         {loading ? (
           <div className="admin-card__empty"><p>Cargando...</p></div>
-        ) : pendientes.length === 0 ? (
-          <div className="admin-card__empty"><FileText size={32} /><p>No hay solicitudes pendientes</p><p className="sub">Las nuevas solicitudes apareceran aqui</p></div>
+        ) : solicitudes.length === 0 ? (
+          <div className="admin-card__empty"><FileText size={32} /><p>No hay solicitudes</p><p className="sub">Las nuevas solicitudes aparecerán aquí</p></div>
         ) : (
           <div className="admin-card__body">
-            {pendientes.map(s => {
+            {solicitudes.map(s => {
               const d = s.datos || {}
               const usuario = s.usuarios || {}
+              const tipoConf = TIPO_CONFIG[s.tipo_solicitud] || TIPO_CONFIG.publicacion
+              const estadoConf = ESTADO_CONFIG[s.estado_aprobacion] || ESTADO_CONFIG.pendiente
               return (
                 <div key={s.id_solicitud} className="admin-list-item">
                   <div className="admin-list-item__content">
-                    <div className="admin-list-item__title">
-                      <span className="admin-badge admin-badge--venta" style={{ marginRight: '0.5rem' }}>{d.tipo_inmueble || 'propiedad'}</span>
-                      {d.tipo_operacion === 'arriendo' ? 'Arriendo' : 'Venta'}
+                    <div className="admin-list-item__title" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                      <Badge config={tipoConf} />
+                      <Badge config={estadoConf} />
+                      <span style={{ marginLeft: '0.25rem' }}>
+                        {d.tipo_inmueble || 'propiedad'}
+                        {d.tipo_operacion ? ` — ${d.tipo_operacion === 'arriendo' ? 'Arriendo' : 'Venta'}` : ''}
+                      </span>
                     </div>
                     <div className="admin-list-item__meta">
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                        <User size={10} /> {usuario.nombre || 'Usuario desconocido'}
+                        <User size={10} /> {usuario.nombre || 'Usuario'}
                       </span>
                       {usuario.email && <span style={{ color: '#8097B7' }}>{usuario.email}</span>}
-                      <span><MapPin size={10} style={{ display: 'inline', verticalAlign: 'middle' }} /> {d.ubicacion?.municipio || 'Sin ubicacion'}</span>
-                      <span>$ {Number(d.valor || 0).toLocaleString('es-CO')}</span>
+                      {s.tipo_solicitud === 'edicion' && d.motivo && (
+                        <span style={{ color: '#7C3AED', fontStyle: 'italic' }}>"{d.motivo.substring(0, 60)}{d.motivo.length > 60 ? '...' : ''}"</span>
+                      )}
+                      {s.tipo_solicitud !== 'edicion' && (
+                        <span><MapPin size={10} style={{ display: 'inline', verticalAlign: 'middle' }} /> {d.ubicacion?.municipio || 'Sin ubicación'}</span>
+                      )}
+                      {s.id_inmueble && s.tipo_solicitud === 'edicion' && (
+                        <span style={{ color: '#5A4864' }}>Propiedad #{s.id_inmueble}</span>
+                      )}
+                      {d.valor && <span>$ {Number(d.valor).toLocaleString('es-CO')}</span>}
                       <span>{new Date(s.fecha_solicitud).toLocaleDateString('es-CO')}</span>
                     </div>
                   </div>
                   <div className="admin-list-item__actions">
                     <button className="admin-btn admin-btn--ghost" title="Ver detalles" onClick={() => setDetailModal(s)}><Eye size={13} /></button>
-                    <button className="admin-btn admin-btn--success admin-btn--sm" onClick={() => handleAprobar(s.id_solicitud)}><Check size={12} /> Aprobar</button>
-                    <button className="admin-btn admin-btn--danger admin-btn--sm" onClick={() => { setRechazoModal(s); setMotivoRechazo('') }}><X size={12} /> Rechazar</button>
-                    <button className="admin-btn admin-btn--ghost admin-btn--sm" title="Eliminar solicitud" style={{ color: '#CC1E2B' }} onClick={() => handleEliminar(s.id_solicitud)}><Trash2 size={12} /></button>
+                    {s.estado_aprobacion === 'pendiente' && (
+                      <>
+                        <button className="admin-btn admin-btn--success admin-btn--sm" onClick={() => handleAprobar(s.id_solicitud, s.tipo_solicitud)}><Check size={12} /> Aprobar</button>
+                        <button className="admin-btn admin-btn--danger admin-btn--sm" onClick={() => setRejectTarget(s)}><X size={12} /> Rechazar</button>
+                      </>
+                    )}
+                    <button className="admin-btn admin-btn--ghost admin-btn--sm" title="Eliminar" style={{ color: '#CC1E2B' }} onClick={() => setDeleteTarget(s)}><Trash2 size={12} /></button>
                   </div>
                 </div>
               )
@@ -86,8 +170,28 @@ export default function AdminSolicitudes() {
         )}
       </div>
 
-      {/* Detail Modal */}
-      {detailModal && (
+      {/* Detail Modal — different modal for edicion type */}
+      {detailModal && detailModal.tipo_solicitud === 'edicion' && (
+        <EditSolicitudDetailModal
+          solicitud={detailModal}
+          onClose={() => setDetailModal(null)}
+          headerActions={
+            detailModal.estado_aprobacion === 'pendiente' ? (
+              <>
+                <button className="admin-btn admin-btn--success admin-btn--sm" onClick={() => handleAprobar(detailModal.id_solicitud, detailModal.tipo_solicitud)}>
+                  <Check size={12} /> Aprobar
+                </button>
+                <button className="admin-btn admin-btn--danger admin-btn--sm" onClick={() => { setDetailModal(null); setRejectTarget(detailModal) }}>
+                  <X size={12} /> Rechazar
+                </button>
+              </>
+            ) : null
+          }
+        />
+      )}
+
+      {/* Detail Modal — property detail for publicacion/revision types */}
+      {detailModal && detailModal.tipo_solicitud !== 'edicion' && (
         <PropertyFullDetailModal
           property={{
             ...detailModal.datos,
@@ -103,10 +207,10 @@ export default function AdminSolicitudes() {
           headerActions={
             detailModal.estado_aprobacion === 'pendiente' ? (
               <>
-                <button className="admin-btn admin-btn--success admin-btn--sm" onClick={() => handleAprobar(detailModal.id_solicitud)}>
+                <button className="admin-btn admin-btn--success admin-btn--sm" onClick={() => handleAprobar(detailModal.id_solicitud, detailModal.tipo_solicitud)}>
                   <Check size={12} /> Aprobar
                 </button>
-                <button className="admin-btn admin-btn--danger admin-btn--sm" onClick={() => { setDetailModal(null); setRechazoModal(detailModal); setMotivoRechazo('') }}>
+                <button className="admin-btn admin-btn--danger admin-btn--sm" onClick={() => { setDetailModal(null); setRejectTarget(detailModal) }}>
                   <X size={12} /> Rechazar
                 </button>
               </>
@@ -115,70 +219,28 @@ export default function AdminSolicitudes() {
         />
       )}
 
-      {/* Rechazo Modal */}
-      {rechazoModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(13,27,46,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div style={{ background: '#fff', borderRadius: '14px', padding: '28px', width: '100%', maxWidth: '420px', border: '0.5px solid #e0d8ec' }}>
-            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#FCE8EC', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
-                <AlertTriangle size={22} color="#CC1E2B" />
-              </div>
-              <h3 style={{ fontSize: '16px', fontWeight: 500, color: '#241929', margin: '0 0 6px' }}>Rechazar solicitud</h3>
-              <p style={{ fontSize: '12px', color: '#8097B7', margin: 0 }}>
-                {rechazoModal.datos?.tipo_inmueble || 'Propiedad'} · {(rechazoModal.usuarios || {}).nombre || 'Usuario'}
-              </p>
-            </div>
+      {/* Reject Modal (reutilizable) */}
+      <RejectModal
+        open={!!rejectTarget}
+        title="Rechazar solicitud"
+        description={
+          rejectTarget
+            ? `${TIPO_CONFIG[rejectTarget.tipo_solicitud]?.label || 'Publicación'} · ${(rejectTarget.usuarios || {}).nombre || 'Usuario'}`
+            : ''
+        }
+        onConfirm={handleRechazar}
+        onCancel={() => setRejectTarget(null)}
+        minLength={20}
+      />
 
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#5A4864', marginBottom: '6px' }}>
-                Motivo del rechazo <span style={{ color: '#CC1E2B' }}>*</span>
-              </label>
-              <textarea
-                value={motivoRechazo}
-                onChange={(e) => setMotivoRechazo(e.target.value)}
-                placeholder="Explica al usuario por qué se rechaza su solicitud..."
-                rows={4}
-                style={{
-                  width: '100%', padding: '10px 12px', fontSize: '13px', color: '#241929',
-                  border: '0.5px solid #e0d8ec', borderRadius: '8px', background: '#F4F0F8',
-                  resize: 'vertical', outline: 'none', fontFamily: 'inherit'
-                }}
-                autoFocus
-              />
-              {motivoRechazo.trim().length > 0 && motivoRechazo.trim().length < 10 && (
-                <p style={{ fontSize: '11px', color: '#8C1132', marginTop: '4px' }}>Mínimo 10 caracteres</p>
-              )}
-            </div>
-
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setRechazoModal(null)}
-                style={{
-                  padding: '8px 16px', fontSize: '11px', fontWeight: 500,
-                  background: 'transparent', color: '#5A4864', border: '0.5px solid #e0d8ec',
-                  borderRadius: '8px', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em'
-                }}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => handleRechazar(rechazoModal.id_solicitud)}
-                disabled={motivoRechazo.trim().length < 10}
-                style={{
-                  padding: '8px 18px', fontSize: '11px', fontWeight: 500,
-                  background: motivoRechazo.trim().length >= 10 ? '#CC1E2B' : '#e0d8ec',
-                  color: motivoRechazo.trim().length >= 10 ? '#fff' : '#8097B7',
-                  border: 'none', borderRadius: '8px',
-                  cursor: motivoRechazo.trim().length >= 10 ? 'pointer' : 'not-allowed',
-                  textTransform: 'uppercase', letterSpacing: '0.05em'
-                }}
-              >
-                <X size={11} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> Confirmar rechazo
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Delete Confirm Modal */}
+      <DeleteConfirmModal
+        open={!!deleteTarget}
+        title="Eliminar solicitud"
+        description={`¿Eliminar esta solicitud de ${TIPO_CONFIG[deleteTarget?.tipo_solicitud]?.label || 'publicación'}? Esta acción no se puede deshacer.`}
+        onConfirm={() => handleEliminar(deleteTarget.id_solicitud)}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

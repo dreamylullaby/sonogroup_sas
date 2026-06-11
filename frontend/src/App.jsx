@@ -75,7 +75,7 @@ function App() {
                     <Route path="/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                     <Route path="/configuracion" element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />
                     <Route path="/ayuda" element={<HelpCenter />} />
-                    <Route path="/editar-propiedad/:id" element={<ProtectedRoute adminOnly={true}><EditProperty /></ProtectedRoute>} />
+                    <Route path="/editar-propiedad/:id" element={<ProtectedRoute><EditProperty /></ProtectedRoute>} />
                   </Routes>
                 </main>
                 <Footer />

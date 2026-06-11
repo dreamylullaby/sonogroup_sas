@@ -482,6 +482,62 @@ router.put('/:id', verificarToken, async (req, res) => {
             return res.status(403).json({ error: 'No tienes permisos para modificar este inmueble' });
         }
 
+        // Si no es admin, verificar que tenga solicitud de edición aprobada
+        if (req.usuario.rol !== 'admin') {
+            const { data: solicitudEdicion } = await supabase
+                .from('solicitudes_publicacion')
+                .select('id_solicitud')
+                .eq('id_usuario', req.usuario.id_usuario)
+                .eq('id_inmueble', id)
+                .eq('tipo_solicitud', 'edicion')
+                .eq('estado_aprobacion', 'aprobado')
+                .limit(1)
+                .maybeSingle();
+
+            if (!solicitudEdicion) {
+                return res.status(403).json({
+                    error: 'Necesitas una solicitud de edición aprobada para modificar este inmueble',
+                    codigo: 'EDICION_NO_APROBADA'
+                });
+            }
+
+            // Usuario con permiso: NO aplicar cambios directamente,
+            // sino crear solicitud de revision_edicion
+            const payload = req.body;
+            const { data: revision, error: errRev } = await supabase
+                .from('solicitudes_publicacion')
+                .insert([{
+                    id_usuario: req.usuario.id_usuario,
+                    id_inmueble: parseInt(id),
+                    datos: payload,
+                    estado_aprobacion: 'pendiente',
+                    tipo_solicitud: 'revision_edicion'
+                }])
+                .select()
+                .single();
+
+            if (errRev) throw errRev;
+
+            // Notificar a admins
+            const { data: admins } = await supabase.from('usuarios').select('id_usuario').eq('rol', 'admin');
+            if (admins && admins.length > 0) {
+                await supabase.from('notificaciones').insert(
+                    admins.map(a => ({
+                        id_usuario: a.id_usuario,
+                        tipo: 'sistema',
+                        titulo: 'Cambios enviados para revisión',
+                        mensaje: `Un usuario envió cambios para revisión en propiedad #${id}.`
+                    }))
+                );
+            }
+
+            return res.json({
+                mensaje: 'Cambios enviados para revisión del administrador',
+                solicitud: revision,
+                codigo: 'REVISION_CREADA'
+            });
+        }
+
         // 1. Actualizar tabla inmuebles (solo campos que existen en la tabla)
         const datosInmueble = {};
         if (valor !== undefined) datosInmueble.valor = parseFloat(valor);

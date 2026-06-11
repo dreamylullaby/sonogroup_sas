@@ -12,10 +12,11 @@ import '../../styles/pages/PublishProperty.css'
 
 const CURRENT_YEAR = new Date().getFullYear()
 
-const PublishProperty = ({ editMode = false, propertyId = null }) => {
+const PublishProperty = ({ editMode = false, propertyId = null, modoRevision = false }) => {
   const { user } = useAuth()
   const navigate = useNavigate()
   const formRef = useRef(null)
+  const originalDataRef = useRef(null)
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(editMode)
   const [errors, setErrors] = useState({})
@@ -114,6 +115,26 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
       if (p.caracteristicas) {
         const { id_inmueble, ...rest } = p.caracteristicas
         setCaract(rest)
+      }
+
+      // Guardar datos originales para comparación en modo revisión
+      if (modoRevision) {
+        originalDataRef.current = {
+          formData: {
+            valor: p.valor || '', valor_administracion: p.valor_administracion || '',
+            estrato: p.estrato?.toString() || '3', descripcion: p.descripcion || '',
+            numero_matricula: p.numero_matricula || '', codigo_catastral: p.codigo_catastral || '',
+            tipo_operacion: p.tipo_operacion || 'venta', tipo_inmueble: p.tipo_inmueble || 'casa',
+            estado_inmueble: p.estado_inmueble || 'nuevo', zona: p.zona || 'urbano',
+            acepta_permuta: p.acepta_permuta || false
+          },
+          ubicacion: {
+            direccion: p.ubicaciones?.direccion || '', barrio_vereda: p.ubicaciones?.barrio_vereda || '',
+            municipio: p.ubicaciones?.municipio || '', departamento: p.ubicaciones?.departamento || ''
+          },
+          servicios: { ...servicios },
+          caract: p.caracteristicas ? (() => { const { id_inmueble: _id, ...r } = p.caracteristicas; return r })() : {}
+        }
       }
     } catch (err) {
       setErrors({ general: parseApiError(err) })
@@ -388,12 +409,50 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
     const result = validateStep(4, { show: true })
     if (!result.isValid) return
 
+    setLoading(true)
     try {
       const payload = buildInmueblePayload({ ...formData }, ubicacion, servicios, caract)
+
+      // Modo revisión: usuario envía cambios para revisión del admin
+      if (modoRevision && editMode && propertyId) {
+        const original = originalDataRef.current
+        if (!original) {
+          setErrors({ general: 'Error: no se pudieron cargar los datos originales para comparar.' })
+          return
+        }
+
+        // Detectar cambios
+        const payloadActual = { formData: { ...formData }, ubicacion: { ...ubicacion }, servicios: { ...servicios }, caract: { ...caract } }
+        const camposModificados = detectarCambios(original, payloadActual)
+
+        if (Object.keys(camposModificados).length === 0) {
+          setErrors({ general: 'No has realizado ningún cambio en la propiedad.' })
+          return
+        }
+
+        // Crear solicitud de revisión
+        await api.post('/api/propiedades-pendientes/revision-edicion', {
+          id_inmueble: parseInt(propertyId),
+          snapshot_cambios: {
+            ...payload,
+            _meta: { campos_modificados: camposModificados }
+          }
+        })
+
+        setSuccess('Tus cambios fueron enviados al administrador para revisión.')
+        setTimeout(() => navigate(`/propiedad/${propertyId}`), 1500)
+        return
+      }
+
+      // Flujo normal: admin edita directo
       if (editMode && propertyId) {
-        await api.put(`/api/inmuebles/${propertyId}`, payload)
-        setSuccess('Propiedad actualizada exitosamente')
-        setTimeout(() => navigate('/'), 1500)
+        const response = await api.put(`/api/inmuebles/${propertyId}`, payload)
+        if (response.data?.codigo === 'REVISION_CREADA') {
+          setSuccess('Cambios enviados para revisión del administrador')
+        } else {
+          setSuccess('Propiedad actualizada exitosamente')
+        }
+        setTimeout(() => navigate(-1), 1500)
       } else if (user.rol === 'admin') {
         await api.post('/api/inmuebles-admin', payload)
         setSuccess('Propiedad publicada exitosamente')
@@ -412,6 +471,37 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Detectar cambios entre datos originales y actuales
+  function detectarCambios(original, actual) {
+    const cambios = {}
+    // Comparar formData
+    for (const key of Object.keys(actual.formData || {})) {
+      const valOrig = JSON.stringify(original.formData?.[key] ?? null)
+      const valNew = JSON.stringify(actual.formData?.[key] ?? null)
+      if (valOrig !== valNew) cambios[`formData.${key}`] = { anterior: original.formData?.[key], nuevo: actual.formData?.[key] }
+    }
+    // Comparar ubicacion
+    for (const key of Object.keys(actual.ubicacion || {})) {
+      const valOrig = JSON.stringify(original.ubicacion?.[key] ?? null)
+      const valNew = JSON.stringify(actual.ubicacion?.[key] ?? null)
+      if (valOrig !== valNew) cambios[`ubicacion.${key}`] = { anterior: original.ubicacion?.[key], nuevo: actual.ubicacion?.[key] }
+    }
+    // Comparar servicios
+    for (const key of Object.keys(actual.servicios || {})) {
+      const valOrig = JSON.stringify(original.servicios?.[key] ?? null)
+      const valNew = JSON.stringify(actual.servicios?.[key] ?? null)
+      if (valOrig !== valNew) cambios[`servicios.${key}`] = { anterior: original.servicios?.[key], nuevo: actual.servicios?.[key] }
+    }
+    // Comparar caract
+    const allCaractKeys = new Set([...Object.keys(original.caract || {}), ...Object.keys(actual.caract || {})])
+    for (const key of allCaractKeys) {
+      const valOrig = JSON.stringify(original.caract?.[key] ?? null)
+      const valNew = JSON.stringify(actual.caract?.[key] ?? null)
+      if (valOrig !== valNew) cambios[`caract.${key}`] = { anterior: original.caract?.[key], nuevo: actual.caract?.[key] }
+    }
+    return cambios
   }
 
   const handleSaveDraft = async () => {
@@ -479,8 +569,8 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
     <div className="publish-property-page">
       <div className="publish-container">
         <div className="publish-header">
-          <h1>{editMode ? 'Editar Propiedad' : 'Publicar Propiedad'}</h1>
-          <p>{editMode ? 'Modifica los datos de tu inmueble' : user?.rol === 'admin' ? 'Publicación directa como administrador' : 'Completa el formulario para enviar a revisión'}</p>
+          <h1>{modoRevision ? 'Editar Propiedad' : editMode ? 'Editar Propiedad' : 'Publicar Propiedad'}</h1>
+          <p>{modoRevision ? 'Modifica los datos y envía los cambios para revisión del administrador' : editMode ? 'Modifica los datos de tu inmueble' : user?.rol === 'admin' ? 'Publicación directa como administrador' : 'Completa el formulario para enviar a revisión'}</p>
         </div>
 
         <Stepper currentStep={currentStep} />
@@ -531,7 +621,7 @@ const PublishProperty = ({ editMode = false, propertyId = null }) => {
                 </button>
               ) : (
                 <button type="submit" className="btn-next" disabled={loading}>
-                  {loading ? 'Procesando...' : editMode ? 'Actualizar' : 'Publicar propiedad'} <Send size={12} />
+                  {loading ? 'Procesando...' : modoRevision ? 'Enviar cambios para revisión' : editMode ? 'Actualizar' : 'Publicar propiedad'} <Send size={12} />
                 </button>
               )}
             </div>
