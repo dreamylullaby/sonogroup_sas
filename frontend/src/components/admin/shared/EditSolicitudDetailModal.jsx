@@ -132,6 +132,7 @@ function PropertyFullInfo({ property, formatPrice }) {
   if (c.cuarto_servicio) amenities.push('Cuarto servicio')
   if (c.bano_servicio) amenities.push('Baño servicio')
   if (c.amoblado) amenities.push('Amoblado')
+  if (c.banos === true) amenities.push('Baño privado')
   if (c.jacuzzi) amenities.push('Jacuzzi')
   if (c.cancha) amenities.push('Cancha')
   if (c.lago_estanque) amenities.push('Lago/Estanque')

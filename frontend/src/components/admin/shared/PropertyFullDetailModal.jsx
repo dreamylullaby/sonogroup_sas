@@ -37,6 +37,7 @@ export default function PropertyFullDetailModal({ property, usuario, onClose, on
   if (c.cuarto_servicio) amenities.push('Cuarto de servicio')
   if (c.bano_servicio) amenities.push('Baño de servicio')
   if (c.amoblado) amenities.push('Amoblado')
+  if (c.banos === true) amenities.push('Baño privado')
   if (c.parqueadero || c.tipo_parqueadero) amenities.push('Parqueadero')
   if (c.jacuzzi) amenities.push('Jacuzzi')
   if (c.cancha) amenities.push('Cancha')
