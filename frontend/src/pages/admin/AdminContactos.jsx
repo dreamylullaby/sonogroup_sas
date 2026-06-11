@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { MessageSquare, Eye, CheckCircle, Trash2, X } from 'lucide-react'
 import { api } from '../../config/api'
+import DeleteConfirmModal from '../../components/admin/shared/DeleteConfirmModal'
 
 const ESTADO_CONFIG = {
   pendiente: { label: 'Pendiente', color: '#D97706', bg: '#FEF3C7' },
@@ -31,6 +32,7 @@ export default function AdminContactos() {
   const [resolveModal, setResolveModal] = useState(null)
   const [respuesta, setRespuesta] = useState('')
   const [resolving, setResolving] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   const fetchData = () => {
     setLoading(true)
@@ -86,8 +88,8 @@ export default function AdminContactos() {
   }
 
   const handleEliminar = async (id) => {
-    if (!window.confirm('¿Eliminar este contacto permanentemente?')) return
     await api.delete(`/api/admin/contactos/${id}`)
+    setDeleteTarget(null)
     fetchData()
   }
 
@@ -156,7 +158,7 @@ export default function AdminContactos() {
                   {c.estado !== 'resuelto' && (
                     <button className="admin-btn admin-btn--success admin-btn--sm" title="Resolver" onClick={() => { setResolveModal(c); setRespuesta('') }}><CheckCircle size={12} /> Resolver</button>
                   )}
-                  <button className="admin-btn admin-btn--ghost admin-btn--sm" title="Eliminar" style={{ color: '#CC1E2B' }} onClick={() => handleEliminar(c.id_contacto)}><Trash2 size={12} /></button>
+                  <button className="admin-btn admin-btn--ghost admin-btn--sm" title="Eliminar" style={{ color: '#CC1E2B' }} onClick={() => setDeleteTarget(c)}><Trash2 size={12} /></button>
                 </div>
               </div>
             ))}
@@ -311,6 +313,15 @@ export default function AdminContactos() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirm Modal */}
+      <DeleteConfirmModal
+        open={!!deleteTarget}
+        title="Eliminar contacto"
+        description={`¿Eliminar el mensaje de ${deleteTarget?.nombre || 'este contacto'}? Esta acción no se puede deshacer.`}
+        onConfirm={() => handleEliminar(deleteTarget.id_contacto)}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

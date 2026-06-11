@@ -4,6 +4,7 @@ import { api } from '../../config/api'
 import PropertyFullDetailModal from '../../components/admin/shared/PropertyFullDetailModal'
 import EditSolicitudDetailModal from '../../components/admin/shared/EditSolicitudDetailModal'
 import RejectModal from '../../components/admin/shared/RejectModal'
+import DeleteConfirmModal from '../../components/admin/shared/DeleteConfirmModal'
 
 const TIPO_CONFIG = {
   publicacion: { label: 'Publicación', color: '#2563EB', bg: '#DBEAFE' },
@@ -36,6 +37,7 @@ export default function AdminSolicitudes() {
   const [detailModal, setDetailModal] = useState(null)
   const [rejectTarget, setRejectTarget] = useState(null)
   const [filtroTipo, setFiltroTipo] = useState('todas')
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   const fetchData = () => {
     setLoading(true)
@@ -67,8 +69,8 @@ export default function AdminSolicitudes() {
   }
 
   const handleEliminar = async (id) => {
-    if (!window.confirm('Eliminar esta solicitud permanentemente?')) return
     await api.delete(`/api/propiedades-pendientes/${id}`)
+    setDeleteTarget(null)
     fetchData()
   }
 
@@ -159,7 +161,7 @@ export default function AdminSolicitudes() {
                         <button className="admin-btn admin-btn--danger admin-btn--sm" onClick={() => setRejectTarget(s)}><X size={12} /> Rechazar</button>
                       </>
                     )}
-                    <button className="admin-btn admin-btn--ghost admin-btn--sm" title="Eliminar" style={{ color: '#CC1E2B' }} onClick={() => handleEliminar(s.id_solicitud)}><Trash2 size={12} /></button>
+                    <button className="admin-btn admin-btn--ghost admin-btn--sm" title="Eliminar" style={{ color: '#CC1E2B' }} onClick={() => setDeleteTarget(s)}><Trash2 size={12} /></button>
                   </div>
                 </div>
               )
@@ -229,6 +231,15 @@ export default function AdminSolicitudes() {
         onConfirm={handleRechazar}
         onCancel={() => setRejectTarget(null)}
         minLength={20}
+      />
+
+      {/* Delete Confirm Modal */}
+      <DeleteConfirmModal
+        open={!!deleteTarget}
+        title="Eliminar solicitud"
+        description={`¿Eliminar esta solicitud de ${TIPO_CONFIG[deleteTarget?.tipo_solicitud]?.label || 'publicación'}? Esta acción no se puede deshacer.`}
+        onConfirm={() => handleEliminar(deleteTarget.id_solicitud)}
+        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   )
