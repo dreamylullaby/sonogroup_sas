@@ -93,6 +93,65 @@ router.get('/', verificarToken, async (req, res) => {
     }
 });
 
+// Reenviar un contacto no resuelto (crea nuevo referenciando el original)
+router.post('/reenviar/:id', verificarToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const { data: original, error: errGet } = await supabase
+            .from('contactos')
+            .select('*')
+            .eq('id_contacto', id)
+            .single();
+
+        if (errGet || !original) {
+            return res.status(404).json({ error: 'Contacto no encontrado' });
+        }
+
+        if (original.id_usuario !== req.usuario.id_usuario) {
+            return res.status(403).json({ error: 'No tienes permisos' });
+        }
+
+        if (original.estado !== 'no_resuelto') {
+            return res.status(400).json({ error: 'Solo puedes reenviar contactos marcados como no resueltos' });
+        }
+
+        const { data, error } = await supabase
+            .from('contactos')
+            .insert([{
+                nombre: original.nombre,
+                email: original.email,
+                telefono: original.telefono,
+                id_usuario: original.id_usuario,
+                id_inmueble: original.id_inmueble,
+                asunto: original.asunto,
+                mensaje: req.body.mensaje || original.mensaje,
+                estado: 'pendiente'
+            }])
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        // Notificar a admins
+        const { data: admins } = await supabase.from('usuarios').select('id_usuario').eq('rol', 'admin');
+        if (admins && admins.length > 0) {
+            await supabase.from('notificaciones').insert(
+                admins.map(a => ({
+                    id_usuario: a.id_usuario,
+                    tipo: 'contacto',
+                    titulo: 'Consulta reenviada',
+                    mensaje: `${original.nombre} reenvió su consulta: ${original.asunto}`
+                }))
+            );
+        }
+
+        res.status(201).json({ mensaje: 'Consulta reenviada', contacto: data });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Actualizar estado de contacto (solo admin)
 router.put('/:id', verificarToken, async (req, res) => {
     try {

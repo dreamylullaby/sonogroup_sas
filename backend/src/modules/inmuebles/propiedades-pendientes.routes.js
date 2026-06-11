@@ -188,14 +188,21 @@ router.get('/mis-propiedades', verificarToken, async (req, res) => {
     }
 });
 
-// Obtener todas las solicitudes pendientes (solo admin)
+// Obtener todas las solicitudes (solo admin) — soporta ?tipo=publicacion|edicion|eliminacion
 router.get('/', verificarToken, verificarRol(['admin']), async (req, res) => {
     try {
-        const { data, error } = await supabase
+        const { tipo } = req.query;
+
+        let query = supabase
             .from('solicitudes_publicacion')
             .select(`*, usuarios!solicitudes_publicacion_id_usuario_fkey (nombre:nombre_completo, email, telefono)`)
             .order('fecha_solicitud', { ascending: false });
 
+        if (tipo) {
+            query = query.eq('tipo_solicitud', tipo);
+        }
+
+        const { data, error } = await query;
         if (error) throw error;
 
         res.json({ propiedades: data || [] });
@@ -225,8 +232,7 @@ router.put('/:id/aprobar', verificarToken, verificarRol(['admin']), async (req, 
                 .update({
                     estado_aprobacion: 'aprobado',
                     admin_revisor: req.usuario.id_usuario,
-                    fecha_revision: new Date().toISOString(),
-                    fecha_resolucion: new Date().toISOString()
+                    fecha_revision: new Date().toISOString()
                 })
                 .eq('id_solicitud', id);
 
@@ -317,93 +323,6 @@ router.put('/:id/aprobar', verificarToken, verificarRol(['admin']), async (req, 
         res.json({ mensaje: 'Propiedad aprobada y publicada', propiedad: nuevoInmueble });
     } catch (error) {
         console.error('❌ Error al aprobar solicitud:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Marcar solicitud como recibida (admin abrió/vio la solicitud)
-router.put('/:id/recibido', verificarToken, verificarRol(['admin']), async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        const { data: solicitud, error: errGet } = await supabase
-            .from('solicitudes_publicacion')
-            .select('estado_aprobacion')
-            .eq('id_solicitud', id)
-            .single();
-
-        if (errGet || !solicitud) {
-            return res.status(404).json({ error: 'Solicitud no encontrada' });
-        }
-
-        // Solo cambiar a recibido si está pendiente
-        if (solicitud.estado_aprobacion !== 'pendiente') {
-            return res.json({ mensaje: 'Solicitud ya fue procesada', estado: solicitud.estado_aprobacion });
-        }
-
-        const { data, error } = await supabase
-            .from('solicitudes_publicacion')
-            .update({
-                estado_aprobacion: 'recibido',
-                fecha_vista: new Date().toISOString()
-            })
-            .eq('id_solicitud', id)
-            .select()
-            .single();
-
-        if (error) throw error;
-
-        res.json({ mensaje: 'Solicitud marcada como recibida', propiedad: data });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Marcar solicitud como resuelta (admin la resolvió)
-router.put('/:id/resolver', verificarToken, verificarRol(['admin']), async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { nota_admin } = req.body;
-
-        const { data: solicitud, error: errGet } = await supabase
-            .from('solicitudes_publicacion')
-            .select('estado_aprobacion')
-            .eq('id_solicitud', id)
-            .single();
-
-        if (errGet || !solicitud) {
-            return res.status(404).json({ error: 'Solicitud no encontrada' });
-        }
-
-        if (!['pendiente', 'recibido'].includes(solicitud.estado_aprobacion)) {
-            return res.status(400).json({ error: 'Esta solicitud ya fue procesada' });
-        }
-
-        const { data, error } = await supabase
-            .from('solicitudes_publicacion')
-            .update({
-                estado_aprobacion: 'resuelto',
-                admin_revisor: req.usuario.id_usuario,
-                fecha_resolucion: new Date().toISOString(),
-                fecha_revision: new Date().toISOString(),
-                motivo_rechazo: nota_admin || null
-            })
-            .eq('id_solicitud', id)
-            .select()
-            .single();
-
-        if (error) throw error;
-
-        // Notificar al usuario
-        await supabase.from('notificaciones').insert([{
-            id_usuario: data.id_usuario,
-            tipo: 'aprobacion',
-            titulo: 'Solicitud resuelta',
-            mensaje: 'Tu solicitud ha sido resuelta por el administrador.'
-        }]);
-
-        res.json({ mensaje: 'Solicitud marcada como resuelta', propiedad: data });
-    } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
@@ -512,8 +431,7 @@ router.post('/:id/reenviar', verificarToken, async (req, res) => {
                 id_inmueble: solicitudOriginal.id_inmueble,
                 datos: solicitudOriginal.datos,
                 estado_aprobacion: 'pendiente',
-                tipo_solicitud: solicitudOriginal.tipo_solicitud,
-                id_solicitud_origen: solicitudOriginal.id_solicitud
+                tipo_solicitud: solicitudOriginal.tipo_solicitud
             }])
             .select()
             .single();

@@ -21,6 +21,7 @@ import fincasRoutes from './modules/propiedades/fincas.routes.js';
 import lotesRoutes from './modules/propiedades/lotes.routes.js';
 import contactosRoutes from './modules/contactos/contactos.routes.js';
 import contactoGeneralRoutes from './modules/contactos/contacto-general.routes.js';
+import contactosAdminRoutes from './modules/contactos/contactos-admin.routes.js';
 import favoritosRoutes from './modules/favoritos/favoritos.routes.js';
 import fotografiasRoutes from './modules/fotografias/fotografias.routes.js';
 import caracteristicasRoutes from './modules/caracteristicas/caracteristicas.routes.js';
@@ -107,6 +108,7 @@ app.use('/api/lotes', lotesRoutes);
 
 // Rutas admin consolidadas
 app.use('/api/admin/stats', adminStatsRoutes);
+app.use('/api/admin/contactos', contactosAdminRoutes);
 app.use('/api/borradores', borradoresRoutes);
 
 // Middleware de manejo de errores
